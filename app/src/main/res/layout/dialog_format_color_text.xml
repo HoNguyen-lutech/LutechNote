@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+    <androidx.appcompat.widget.AppCompatTextView
+        android:id="@+id/selectColorTv"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Select color"
+        android:layout_gravity="center"
+        android:textColor="@color/black"
+        android:textSize="@dimen/_20ssp"/>
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rcvFormatColor"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/_8sdp"/>
+    <androidx.appcompat.widget.AppCompatTextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Opacity(100%):"
+        android:textColor="@color/black"
+        android:layout_gravity="center"/>
+    <androidx.appcompat.widget.AppCompatSeekBar
+        android:id="@+id/opacity"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:progress="100"
+        android:thumbTint="@color/brownEarth"
+        android:progressTint="@color/brownEarth"
+        android:max="100"
+        android:stepSize="1"/>
+    <androidx.appcompat.widget.AppCompatButton
+        android:id="@+id/removeFormatColorBtn"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/remove_the_color"
+        android:layout_gravity="center"
+        android:drawableLeft="@drawable/ic_remove_color_24"
+        android:drawableTint="@color/black"/>
+</LinearLayout>

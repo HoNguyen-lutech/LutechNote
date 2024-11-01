@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <item
+        android:id="@+id/selectAll"
+        android:icon="@drawable/ic_select_all_24"
+        android:title="@string/select_all"
+        android:iconTint="@color/white"
+        app:showAsAction="always"/>
+    <item
+        android:id="@+id/restore"
+        android:icon="@drawable/ic_restore_24"
+        android:title="@string/restore"
+        android:iconTint="@color/white"
+        app:showAsAction="always"/>
+    <item
+        android:id="@+id/export_notes_to_text_file"
+        android:title="@string/export_notes_to_text_files"
+        app:showAsAction="never"/>
+    <item
+        android:id="@+id/delete"
+        android:title="@string/delete"
+        app:showAsAction="never"/>
+</menu>

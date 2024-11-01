@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+    <androidx.appcompat.widget.AppCompatTextView
+        android:id="@+id/textPreview"
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/_64sdp"
+        android:gravity="center"
+        android:textSize="@dimen/_20ssp"
+        android:layout_marginTop="@dimen/_16sdp"/>
+    <SeekBar
+        android:id="@+id/sbTextSize"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:max="64"
+        android:min="6"
+        android:progress="18"
+        android:progressTint="@color/brownEarth"
+        android:thumbTint="@color/brownEarth"/>
+    <androidx.appcompat.widget.AppCompatButton
+        android:id="@+id/defaultSizeBtn"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:text="@string/set_default_18"/>
+</LinearLayout>
