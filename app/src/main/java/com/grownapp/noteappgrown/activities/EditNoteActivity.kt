@@ -1,6 +1,5 @@
 package com.grownapp.noteappgrown.activities
 
-import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.AlertDialog
 import android.content.Intent
@@ -9,6 +8,8 @@ import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.icu.util.Calendar
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.text.Editable
 import android.text.Html
 import android.text.Spannable
@@ -57,8 +58,6 @@ import com.grownapp.noteappgrown.viewmodel.NoteViewModel
 import com.grownapp.noteappgrown.viewmodel.NoteViewModelFactory
 import java.text.SimpleDateFormat
 import java.util.Locale
-import kotlin.math.max
-import kotlin.math.min
 
 class EditNoteActivity : AppCompatActivity(), OnColorClickListener {
     private val binding: ActivityEditNoteBinding by lazy {
@@ -124,12 +123,19 @@ class EditNoteActivity : AppCompatActivity(), OnColorClickListener {
         "BOLD" to false,
         "ITALIC" to false,
         "UNDERLINE" to false,
-        "STRIKETHROUGH" to false
-
+        "STRIKETHROUGH" to false,
+        "FILLCOLOR" to false,
+        "TEXTCOLOR" to false,
+        "TEXTSIZE" to false
     )
     private var currentTextColor: Int? = null
     private var currentBackgroundColor: Int? = null
     private var currentTextSize: Int? = null
+
+    private val handler = Handler(Looper.getMainLooper())
+    private var previousStart = -1
+    private var previousEnd = -1
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -207,6 +213,8 @@ class EditNoteActivity : AppCompatActivity(), OnColorClickListener {
                 }
             }
         }
+
+
         binding.edtContent.addTextChangedListener(object : TextWatcher{
             private var startPosition = 0
             private var endPosition = 0
@@ -273,6 +281,7 @@ class EditNoteActivity : AppCompatActivity(), OnColorClickListener {
                 }
             }
         })
+        startSelectionMonitor()
     }
 
     private fun toggleStyleForContent(style: String){
@@ -389,6 +398,14 @@ class EditNoteActivity : AppCompatActivity(), OnColorClickListener {
                 if (!isCursorOnly) {
                     text.getSpans(start, end, StrikethroughSpan::class.java)
                         .forEach { text.removeSpan(it) }
+                }
+            }
+            if(styleStates["FILLCOLOR"] == true){
+//                onFillColorSelected(currentBackgroundColor!!)
+            }
+            if(styleStates["TEXTCOLOR"] == true){
+                currentTextColor?.let { color ->
+                    text.setSpan(ForegroundColorSpan(color), start, end, Spannable.SPAN_INCLUSIVE_INCLUSIVE)
                 }
             }
         }
@@ -788,6 +805,7 @@ class EditNoteActivity : AppCompatActivity(), OnColorClickListener {
         binding.fillColor.setOnClickListener {
             colorFillOrText = 0
             showFormatColorPickerDialog(binding.fillColor)
+
         }
         binding.textColor.setOnClickListener {
             colorFillOrText = 1
@@ -826,12 +844,37 @@ class EditNoteActivity : AppCompatActivity(), OnColorClickListener {
     private fun setupColorForEditText(editText: EditText, imageView: ImageView) {
         selectedFormatTextColor.let { color ->
             if(selectedFormatTextColor.isNullOrEmpty()){
-                changeColorSelected(editText, "#000000", imageView)
+//                changeColorSelected(editText, "#000000", imageView)
+                val spannable = binding.edtContent.text as Spannable
+                val start = binding.edtContent.selectionStart
+                val end = binding.edtContent.selectionEnd
+
+                if (start < end) {  // Kiểm tra có vùng chọn
+                    // Xóa tất cả các BackgroundColorSpan trong vùng chọn
+                    spannable.getSpans(start, end, BackgroundColorSpan::class.java).forEach { span ->
+                        spannable.removeSpan(span)
+                    }
+                    currentBackgroundColor = null
+                }
             }else{
                 changeColorSelected(editText, color, imageView)
                 imageView.setBackgroundColor(Color.parseColor(color))
             }
         }
+    }
+
+    private fun applyBackgroundColorToSelection(editText: EditText, color: Int) {
+        val spannable = editText.text as Spannable
+        val start = editText.selectionStart
+        val end = editText.selectionEnd
+
+        // Xóa các màu nền cũ trong vùng chọn (nếu có)
+        spannable.getSpans(start, end, BackgroundColorSpan::class.java).forEach { span ->
+            spannable.removeSpan(span)
+        }
+
+        // Áp dụng màu nền mới
+        spannable.setSpan(BackgroundColorSpan(color), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
     }
 
     private fun changeColorSelected(editText: EditText, color: String?, imageView: ImageView) {
@@ -842,11 +885,13 @@ class EditNoteActivity : AppCompatActivity(), OnColorClickListener {
         if(imageView == binding.fillColor){
             onBackgroundColorSelected(Color.parseColor(color))
             val spans = spannable.getSpans(start, end, BackgroundColorSpan::class.java)
+            spannable.setSpan(BackgroundColorSpan(colorInt), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
             if(spans.isNotEmpty()){
                 for(span in spans){
                     spannable.removeSpan(span)
                 }
             }else{
+                onFillColorSelected(colorInt)
                 spannable.setSpan(
                     BackgroundColorSpan(colorInt),
                     start,
@@ -860,6 +905,7 @@ class EditNoteActivity : AppCompatActivity(), OnColorClickListener {
         if(imageView == binding.textColor){
             onTextColorSelected(Color.parseColor(color))
             val spans = spannable.getSpans(start, end, ForegroundColorSpan::class.java)
+            spannable.setSpan(ForegroundColorSpan(colorInt), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
             if(spans.isNotEmpty()){
                 for(span in spans){
                     spannable.removeSpan(span)
@@ -1099,6 +1145,9 @@ class EditNoteActivity : AppCompatActivity(), OnColorClickListener {
     private fun applyBackgroundColor(start: Int, end: Int){
         val text = binding.edtContent.text
         if(text is Spannable && currentBackgroundColor != null){
+            text.getSpans(start, end, BackgroundColorSpan::class.java).forEach { span ->
+                text.removeSpan(span)
+            }
             text.setSpan(BackgroundColorSpan(currentBackgroundColor!!), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
         }
     }
@@ -1156,5 +1205,127 @@ class EditNoteActivity : AppCompatActivity(), OnColorClickListener {
     private fun onTextSizeSelectedForTitle(size: Int){
         currentTextSize = size
         applyTextSize(binding.edtTitle.selectionStart, binding.edtTitle.selectionEnd)
+    }
+
+    private fun startSelectionMonitor() {
+        handler.post(object : Runnable {
+            override fun run() {
+                val start = binding.edtContent.selectionStart
+                val end = binding.edtContent.selectionEnd
+
+                // Chỉ kiểm tra khi vùng chọn thay đổi
+                if (start != previousStart || end != previousEnd) {
+                    binding.bold.setBackgroundColor(Color.TRANSPARENT)
+                    binding.italic.setBackgroundColor(Color.TRANSPARENT)
+                    binding.underline.setBackgroundColor(Color.TRANSPARENT)
+                    binding.strikeThrough.setBackgroundColor(Color.TRANSPARENT)
+                    binding.fillColor.setBackgroundColor(Color.TRANSPARENT)
+                    binding.textColor.setBackgroundColor(Color.TRANSPARENT)
+
+                    if(isSingleEffectAppliedOnly(binding.edtContent, start, end)){
+                        checkTextStyle(start, end)
+                        previousStart = start
+                        previousEnd = end
+                    }
+                }
+
+                // Kiểm tra lại sau mỗi 100ms
+                handler.postDelayed(this, 100)
+            }
+        })
+    }
+    private fun checkTextStyle(start: Int, end: Int) {
+        if (start < end) {
+            val spannable = binding.edtContent.text as Spannable
+
+            // Kiểm tra in đậm
+            val boldSpans = spannable.getSpans(start, end, StyleSpan::class.java).filter { it.style == Typeface.BOLD }
+            val isBoldOnly = boldSpans.isNotEmpty() && boldSpans.all { spannable.getSpanStart(it) <= start && spannable.getSpanEnd(it) >= end }
+
+            // Kiểm tra in nghiêng
+            val italicSpans = spannable.getSpans(start, end, StyleSpan::class.java).filter { it.style == Typeface.ITALIC }
+            val isItalicOnly = italicSpans.isNotEmpty() && italicSpans.all { spannable.getSpanStart(it) <= start && spannable.getSpanEnd(it) >= end }
+
+            // Kiểm tra gạch chân (underline)
+            val underlineSpans = spannable.getSpans(start, end, UnderlineSpan::class.java)
+            val isUnderlineOnly = underlineSpans.isNotEmpty() && underlineSpans.all { spannable.getSpanStart(it) <= start && spannable.getSpanEnd(it) >= end }
+
+            // Kiểm tra gạch ngang (strikethrough)
+            val strikeSpans = spannable.getSpans(start, end, StrikethroughSpan::class.java)
+            val isStrikethroughOnly = strikeSpans.isNotEmpty() && strikeSpans.all { spannable.getSpanStart(it) <= start && spannable.getSpanEnd(it) >= end }
+
+            // Kiểm tra màu nền (fill color)
+            val backgroundColorSpans = spannable.getSpans(start, end, BackgroundColorSpan::class.java)
+            val isBackgroundOnly = backgroundColorSpans.isNotEmpty() && backgroundColorSpans.all { spannable.getSpanStart(it) <= start && spannable.getSpanEnd(it) >= end }
+
+            // Kiểm tra màu chữ (text color)
+            val colorSpans = spannable.getSpans(start, end, ForegroundColorSpan::class.java)
+            val isColorOnly = colorSpans.isNotEmpty() && colorSpans.all { spannable.getSpanStart(it) <= start && spannable.getSpanEnd(it) >= end }
+
+            // Kiểm tra kích thước chữ (text size)
+            val sizeSpans = spannable.getSpans(start, end, AbsoluteSizeSpan::class.java)
+            val isSizeOnly = sizeSpans.isNotEmpty() && sizeSpans.all { spannable.getSpanStart(it) <= start && spannable.getSpanEnd(it) >= end }
+
+            when {
+                isBoldOnly -> binding.bold.setBackgroundColor(ContextCompat.getColor(this, R.color.enable))
+                isItalicOnly -> binding.italic.setBackgroundColor(ContextCompat.getColor(this, R.color.enable))
+//                isColorOnly -> binding.fillColor.setBackgroundColor(currentBackgroundColor!!)
+//                isBackgroundOnly -> binding.textColor.setBackgroundColor(currentTextColor!!)
+                isUnderlineOnly -> binding.underline.setBackgroundColor(ContextCompat.getColor(this, R.color.enable))
+                isStrikethroughOnly -> binding.strikeThrough.setBackgroundColor(ContextCompat.getColor(this, R.color.enable))
+                isSizeOnly -> binding.textSize.setBackgroundColor(ContextCompat.getColor(this, R.color.enable))
+                else -> println("Vùng chọn có nhiều định dạng hoặc không có định dạng nào.")
+            }
+        }
+    }
+    fun isSingleEffectAppliedOnly(editText: EditText, start: Int, end: Int): Boolean {
+        val spannable = editText.text as Spannable
+
+        // Kiểm tra toàn bộ vùng chọn chỉ có kiểu in đậm
+        val boldSpans = spannable.getSpans(start, end, StyleSpan::class.java).filter { it.style == Typeface.BOLD }
+        val isBoldOnly = boldSpans.isNotEmpty() && boldSpans.all { spannable.getSpanStart(it) <= start && spannable.getSpanEnd(it) >= end }
+
+        // Kiểm tra toàn bộ vùng chọn chỉ có kiểu in nghiêng
+        val italicSpans = spannable.getSpans(start, end, StyleSpan::class.java).filter { it.style == Typeface.ITALIC }
+        val isItalicOnly = italicSpans.isNotEmpty() && italicSpans.all { spannable.getSpanStart(it) <= start && spannable.getSpanEnd(it) >= end }
+
+        // Kiểm tra toàn bộ vùng chọn chỉ có màu chữ (text color)
+        val colorSpans = spannable.getSpans(start, end, ForegroundColorSpan::class.java)
+        val isColorOnly = colorSpans.isNotEmpty() && colorSpans.size == 1 &&
+                spannable.getSpanStart(colorSpans[0]) <= start && spannable.getSpanEnd(colorSpans[0]) >= end
+
+        // Kiểm tra toàn bộ vùng chọn chỉ có màu nền (fill color)
+        val backgroundColorSpans = spannable.getSpans(start, end, BackgroundColorSpan::class.java)
+        val isBackgroundOnly = backgroundColorSpans.isNotEmpty() && backgroundColorSpans.all { spannable.getSpanStart(it) <= start && spannable.getSpanEnd(it) >= end }
+
+        // Kiểm tra toàn bộ vùng chọn chỉ có kiểu gạch chân (underline)
+        val underlineSpans = spannable.getSpans(start, end, UnderlineSpan::class.java)
+        val isUnderlineOnly = underlineSpans.isNotEmpty() && underlineSpans.all { spannable.getSpanStart(it) <= start && spannable.getSpanEnd(it) >= end }
+
+        // Kiểm tra toàn bộ vùng chọn chỉ có kiểu gạch ngang (strikethrough)
+        val strikeSpans = spannable.getSpans(start, end, StrikethroughSpan::class.java)
+        val isStrikethroughOnly = strikeSpans.isNotEmpty() && strikeSpans.all { spannable.getSpanStart(it) <= start && spannable.getSpanEnd(it) >= end }
+
+        // Kiểm tra toàn bộ vùng chọn chỉ có kích thước chữ duy nhất (text size)
+        val sizeSpans = spannable.getSpans(start, end, AbsoluteSizeSpan::class.java)
+        val isSizeOnly = sizeSpans.isNotEmpty() && sizeSpans.all { spannable.getSpanStart(it) <= start && spannable.getSpanEnd(it) >= end }
+
+        // Trả về true nếu chỉ có một loại hiệu ứng duy nhất áp dụng cho toàn bộ vùng chọn
+        return listOf(isBoldOnly, isItalicOnly, isColorOnly, isBackgroundOnly, isUnderlineOnly, isStrikethroughOnly, isSizeOnly).count { it } == 1
+    }
+    override fun onDestroy() {
+        super.onDestroy()
+        handler.removeCallbacksAndMessages(null) // Ngừng kiểm tra khi Activity bị hủy
+    }
+
+    fun onFillColorSelected(color: Int) {
+        currentBackgroundColor = color
+        val start = binding.edtContent.selectionStart
+        val end = binding.edtContent.selectionEnd
+
+        // Gọi applyBackgroundColor ngay lập tức để áp dụng màu nền
+        if (start != end) {  // Chỉ áp dụng khi có vùng chọn
+            applyBackgroundColor(start, end)
+        }
     }
 }
