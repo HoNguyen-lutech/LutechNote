@@ -3,6 +3,7 @@ package com.grownapp.noteappgrown.adapter
 import android.content.Context
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
+import android.graphics.drawable.StateListDrawable
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -25,11 +26,11 @@ class ListNoteAdapter(private val context: Context, private val onItemClickListe
         override fun areItemsTheSame(oldItem: Note, newItem: Note): Boolean {
             return oldItem.id == newItem.id && oldItem.content == newItem.content && oldItem.title == newItem.title
         }
-
         override fun areContentsTheSame(oldItem: Note, newItem: Note): Boolean {
             return oldItem == newItem
         }
     }
+
     val differ = AsyncListDiffer(this, differCallBack)
     private lateinit var categoryViewModel: CategoryViewModel
     private lateinit var noteViewModel: NoteViewModel
@@ -44,6 +45,7 @@ class ListNoteAdapter(private val context: Context, private val onItemClickListe
     private val selectedItems = mutableSetOf<Note>()
     var isChoosing = false
     var isInTrash = false
+
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ListNoteAdapter.viewHolder {
         categoryViewModel = (parent.context as MainActivity).categoryViewModel
         noteViewModel = (parent.context as MainActivity).noteViewModel
@@ -76,14 +78,60 @@ class ListNoteAdapter(private val context: Context, private val onItemClickListe
                 holder.category.text = null
             }
         }
-        if(differ.currentList[position].color != null){
-            var backgroundDrawer = GradientDrawable()
-            backgroundDrawer.setColor(Color.parseColor(differ.currentList[position].color ?: "#FFFFFF"))
-            backgroundDrawer.setStroke(5, ContextCompat.getColor(context, R.color.brown))
-            holder.noteLayout.background = backgroundDrawer
-        }else{
-            holder.noteLayout.setBackgroundResource(R.drawable.bg_item)
+
+        val backgroundColor = differ.currentList[position].color
+
+
+        val defaultDrawable = GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            orientation = GradientDrawable.Orientation.TOP_BOTTOM
+            colors = if (backgroundColor != null) {
+                intArrayOf(Color.parseColor("#FAF6D1"), Color.parseColor(backgroundColor))
+            } else {
+                intArrayOf(Color.parseColor("#FFFEDB"), Color.parseColor("#FFFDAE"))
+            }
+            cornerRadius = context.resources.getDimension(com.intuit.sdp.R.dimen._5sdp)
+            setStroke(
+                context.resources.getDimension(com.intuit.sdp.R.dimen._1sdp).toInt(),
+                ContextCompat.getColor(context, R.color.brownEarth)
+            )
         }
+
+
+        val selectedDrawable = GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            orientation = GradientDrawable.Orientation.TOP_BOTTOM
+            colors = if (backgroundColor != null) {
+                intArrayOf(Color.parseColor(backgroundColor), Color.parseColor("#C0A28C"))
+            } else {
+                intArrayOf(Color.parseColor("#FAF6D1"), Color.parseColor("#C0A28C"))
+            }
+            cornerRadius = context.resources.getDimension(com.intuit.sdp.R.dimen._5sdp)
+            setStroke(
+                context.resources.getDimension(com.intuit.sdp.R.dimen._2sdp).toInt(),
+                ContextCompat.getColor(context, R.color.brownEarth),
+                context.resources.getDimension(com.intuit.sdp.R.dimen._20sdp),
+                context.resources.getDimension(com.intuit.sdp.R.dimen._2sdp)
+            )
+        }
+
+
+        if (selectedItems.contains(differ.currentList[position])) {
+            holder.noteLayout.background = selectedDrawable
+        } else {
+            holder.noteLayout.background = defaultDrawable
+        }
+
+
+        holder.itemView.setOnLongClickListener {
+            isChoosing = true
+            toggleSelection(differ.currentList[position])
+            onItemClickListener.onNoteLongClick(differ.currentList[position])
+            notifyItemChanged(position)
+            true
+        }
+
+
         holder.itemView.isSelected = selectedItems.contains(differ.currentList[position])
         holder.itemView.setOnClickListener {
             if(holder.itemView.isSelected){
@@ -111,6 +159,7 @@ class ListNoteAdapter(private val context: Context, private val onItemClickListe
             true
         }
     }
+
     fun removeSelectedItems(){
         val newList = differ.currentList.toMutableList().apply {
             removeAll(selectedItems)
@@ -182,5 +231,10 @@ class ListNoteAdapter(private val context: Context, private val onItemClickListe
                 builder.create().show()
             }
         }
+    }
+
+    fun sortNotesByTitleAToZ(){
+        val sortedList = differ.currentList.sortedBy { it.title }
+        differ.submitList(sortedList)
     }
 }

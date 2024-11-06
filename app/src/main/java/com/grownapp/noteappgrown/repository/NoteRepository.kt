@@ -15,6 +15,8 @@ class NoteRepository(private val db: NoteDatabase) {
     fun getNotesWithoutCategory() = db.getNoteDao().getNotesWithoutCategory()
     fun getAllTrashNotes() = db.getNoteDao().getAllTrashNotes()
     fun getAllNotes() = db.getNoteDao().getAllNotes()
+    fun getNotesSortByTitleAToZ() = db.getNoteDao().getNotesSortedByTitleAToZ()
+    fun getNOtesSortByTitleZToA() = db.getNoteDao().getNotesSortedByTitleZToA()
     fun searchNote(query: String) = db.getNoteDao().searchNote(query)
     fun getNotesWithCategories() = db.getNoteDao().getNotesWithCategories()
     fun getNotesByCategory(categoryId: Int) = db.getNoteDao().getNotesByCategory(categoryId)

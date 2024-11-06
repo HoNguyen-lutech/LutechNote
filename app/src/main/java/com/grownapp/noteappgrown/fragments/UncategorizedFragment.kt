@@ -30,6 +30,7 @@ import androidx.core.view.MenuProvider
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.lifecycle.Lifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.google.android.material.appbar.MaterialToolbar
 import com.grownapp.noteappgrown.R
 import com.grownapp.noteappgrown.activities.EditNoteActivity
 import com.grownapp.noteappgrown.activities.MainActivity
@@ -49,7 +50,7 @@ import java.io.InputStreamReader
 import java.text.SimpleDateFormat
 import java.util.Locale
 
-class UncategorizedFragment : Fragment(R.layout.fragment_uncategorized), MenuProvider, SearchView.OnQueryTextListener {
+class UncategorizedFragment : Fragment(R.layout.fragment_uncategorized), MenuProvider, androidx.appcompat.widget.SearchView.OnQueryTextListener {
     private val binding: FragmentUncategorizedBinding by lazy {
         FragmentUncategorizedBinding.inflate(layoutInflater)
     }
@@ -87,7 +88,7 @@ class UncategorizedFragment : Fragment(R.layout.fragment_uncategorized), MenuPro
         uncategorizedView = view
         setUpNoteRecyclerView()
         (activity as MainActivity).let { mainActivity ->
-            val toolbar = mainActivity.findViewById<Toolbar>(R.id.topAppBar)
+            val toolbar = mainActivity.findViewById<MaterialToolbar>(R.id.topAppBar)
             toolbar.setTitle(requireContext().getString(R.string.notepadFree))
         }
         binding.addNoteFab.setOnClickListener { addNote() }
@@ -311,7 +312,7 @@ class UncategorizedFragment : Fragment(R.layout.fragment_uncategorized), MenuPro
     }
 
     private fun sortByTitleAToZ(noteList: List<Note>) {
-        return noteAdapter.differ.submitList(noteList.sortedBy { it.time })
+        return noteAdapter.differ.submitList(noteList.sortedBy { it.title })
     }
 
     private fun sortByEditDateOldest(noteList: List<Note>) {
@@ -473,7 +474,7 @@ class UncategorizedFragment : Fragment(R.layout.fragment_uncategorized), MenuPro
             }, menu
         )
         if(!isAlternateMenuVisible){
-            val menuSearch = menu.findItem(R.id.search).actionView as SearchView
+            val menuSearch = menu.findItem(R.id.search).actionView as androidx.appcompat.widget.SearchView
             menuSearch.isSubmitButtonEnabled = false
             menuSearch.setOnQueryTextListener(this)
             val sort = SpannableString(menu.findItem(R.id.sort).title)

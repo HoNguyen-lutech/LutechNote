@@ -70,6 +70,7 @@ class NotesFragment : Fragment(R.layout.fragment_notes), MenuProvider, androidx.
     private var isAlternateMenuVisible: Boolean = false
     private lateinit var categories: List<Category>
     private var selectedColor: String? = null
+    private var optionSort: Int = -1
     private val colors = listOf(
         "#FFCDD2", "#F8BBD0", "#E1BEE7", "#D1C4E9", "#C5CAE9",
         "#BBDEFB", "#B3E5FC", "#B2EBF2", "#B2DFDB", "#C8E6C9",
@@ -122,7 +123,6 @@ class NotesFragment : Fragment(R.layout.fragment_notes), MenuProvider, androidx.
         intent.putExtra("time", note.time)
         intent.putExtra("color", note.color)
         startActivity(intent)
-
     }
 
     private fun getCurrentTime(): String {
@@ -141,6 +141,7 @@ class NotesFragment : Fragment(R.layout.fragment_notes), MenuProvider, androidx.
                     intent.putExtra("content",note.content)
                     intent.putExtra("created", note.time)
                     intent.putExtra("color", note.color)
+                    intent.putExtra("sort", optionSort)
                     startActivity(intent)
                 }
                 if(isAlternateMenuVisible){
@@ -161,10 +162,12 @@ class NotesFragment : Fragment(R.layout.fragment_notes), MenuProvider, androidx.
         binding.listNoteRecyclerView.layoutManager = LinearLayoutManager(context, LinearLayoutManager.VERTICAL, false)
         binding.listNoteRecyclerView.adapter = noteAdapter
         activity?.let {
-            noteViewModel.getAllNotes().observe(viewLifecycleOwner){note ->
-                noteAdapter.differ.submitList(note)
-                currentList = noteAdapter.differ.currentList
-                updateUI(note)
+            if(optionSort == -1){
+                noteViewModel.getAllNotes().observe(viewLifecycleOwner){note ->
+                    noteAdapter.differ.submitList(note)
+                    currentList = noteAdapter.differ.currentList
+                    updateUI(note)
+                }
             }
         }
         activity?.let {
@@ -301,12 +304,30 @@ class NotesFragment : Fragment(R.layout.fragment_notes), MenuProvider, androidx.
         val builder: AlertDialog.Builder = AlertDialog.Builder(requireContext())
         builder.setTitle("Sort by").setPositiveButton("Sort"){dialog, which ->
             when (selectedOption){
-                0 -> sortByEditDateNewest(noteList)
-                1 -> sortByEditDateOldest(noteList)
-                2 -> sortByTitleAToZ(noteList)
-                3 -> sortByTitleZToA(noteList)
-                4 -> sortByCreationDateNewest(noteList)
-                5 -> sortByCreationDateOldest(noteList)
+                0 -> {
+                    optionSort = 0
+                    sortByEditDateNewest(noteList)
+                }
+                1 -> {
+                    optionSort = 1
+                    sortByEditDateOldest(noteList)
+                }
+                2 -> {
+                    optionSort = 2
+                    sortByTitleAToZ(noteList)
+                }
+                3 -> {
+                    optionSort = 3
+                    sortByTitleZToA(noteList)
+                }
+                4 -> {
+                    optionSort = 4
+                    sortByCreationDateNewest(noteList)
+                }
+                5 -> {
+                    optionSort = 5
+                    sortByCreationDateOldest(noteList)
+                }
             }
         }.setNegativeButton("Cancel"){dialog, which ->
             dialog.dismiss()
@@ -330,11 +351,23 @@ class NotesFragment : Fragment(R.layout.fragment_notes), MenuProvider, androidx.
     }
 
     private fun sortByTitleZToA(noteList: List<Note>) {
-        return noteAdapter.differ.submitList(noteList.sortedByDescending { it.title })
+        noteAdapter.differ.submitList(noteList.sortedByDescending { it.title })
+        noteViewModel.getNotesSortByTitleZToA().observe(viewLifecycleOwner){note ->
+            noteAdapter.differ.submitList(note)
+            currentList = noteAdapter.differ.currentList
+            updateUI(note)
+            noteAdapter.notifyDataSetChanged()
+        }
     }
 
     private fun sortByTitleAToZ(noteList: List<Note>) {
-        return noteAdapter.differ.submitList(noteList.sortedBy { it.title })
+        noteAdapter.differ.submitList(currentList.sortedBy { it.title })
+        noteViewModel.getNotesSortByTitleAToZ().observe(viewLifecycleOwner){note ->
+            noteAdapter.differ.submitList(note)
+            currentList = noteAdapter.differ.currentList
+            updateUI(note)
+            noteAdapter.notifyDataSetChanged()
+        }
     }
 
     private fun sortByEditDateOldest(noteList: List<Note>) {
@@ -573,6 +606,14 @@ class NotesFragment : Fragment(R.layout.fragment_notes), MenuProvider, androidx.
                 true
             }
             R.id.selectAll -> {
+                noteAdapter.selectAllItem()
+                isAlternateMenuVisible = true
+                changeBackNavigationIcon()
+                requireActivity().invalidateOptionsMenu()
+                updateSelectedCount()
+                true
+            }
+            R.id.select_all_notes -> {
                 noteAdapter.selectAllItem()
                 isAlternateMenuVisible = true
                 changeBackNavigationIcon()

@@ -18,6 +18,8 @@ class NoteViewModel(application: Application, private val noteRepository: NoteRe
         noteRepository.updateNote(note)
     }
     fun getAllNotes() = noteRepository.getAllNotes()
+    fun getNotesSortByTitleAToZ() = noteRepository.getNotesSortByTitleAToZ()
+    fun getNotesSortByTitleZToA() = noteRepository.getNOtesSortByTitleZToA()
     fun searchNote(query: String) = noteRepository.searchNote(query)
     fun deleteNote(id: List<Int>) = viewModelScope.launch {
         noteRepository.deleteByIds(id)

@@ -51,4 +51,8 @@ interface NoteDao {
     fun getColor(id: Int): String
     @Query("select * from notes where id = :id")
     fun getNoteById(id: Int): Note
+    @Query("select * from notes where inTrash = 0 order by title ASC")
+    fun getNotesSortedByTitleAToZ(): LiveData<List<Note>>
+    @Query("select * from notes where inTrash = 0 order by title DESC")
+    fun getNotesSortedByTitleZToA(): LiveData<List<Note>>
 }
