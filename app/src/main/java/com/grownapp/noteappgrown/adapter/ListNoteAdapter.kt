@@ -232,9 +232,4 @@ class ListNoteAdapter(private val context: Context, private val onItemClickListe
             }
         }
     }
-
-    fun sortNotesByTitleAToZ(){
-        val sortedList = differ.currentList.sortedBy { it.title }
-        differ.submitList(sortedList)
-    }
 }
