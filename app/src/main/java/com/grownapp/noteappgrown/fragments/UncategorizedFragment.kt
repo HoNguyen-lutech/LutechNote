@@ -73,7 +73,7 @@ class UncategorizedFragment : Fragment(R.layout.fragment_uncategorized), MenuPro
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        // Inflate the layout for this fragment
+
         return binding.root
     }
 
@@ -124,8 +124,8 @@ class UncategorizedFragment : Fragment(R.layout.fragment_uncategorized), MenuPro
         binding.uncategorizedNote.adapter = noteAdapter
         activity?.let {
             noteViewModel.getNotesWithoutCategory().observe(viewLifecycleOwner){note ->
-                noteAdapter.differ.submitList(note)
-                currentList = noteAdapter.differ.currentList
+                noteAdapter.updateNotes(note)
+                currentList = noteAdapter.getNotes()
                 updateUI(note)
             }
         }
@@ -147,7 +147,7 @@ class UncategorizedFragment : Fragment(R.layout.fragment_uncategorized), MenuPro
 
     private fun changeBackNavigationIcon() {
         (activity as MainActivity).let { mainActivity ->
-            val toolbar = mainActivity.findViewById<Toolbar>(R.id.topAppBar)
+            val toolbar = mainActivity.findViewById<MaterialToolbar>(R.id.topAppBar)
             val drawerLayout = mainActivity.findViewById<DrawerLayout>(R.id.drawerLayout)
             toolbar.setNavigationIcon(R.drawable.ic_back_24)
             toolbar.navigationIcon?.setTint(ContextCompat.getColor(requireContext(), R.color.white))
@@ -242,7 +242,7 @@ class UncategorizedFragment : Fragment(R.layout.fragment_uncategorized), MenuPro
 
     private fun updateSelectedCount() {
         (activity as MainActivity).let { mainActivity ->
-            val toolbar = mainActivity.findViewById<Toolbar>(R.id.topAppBar)
+            val toolbar = mainActivity.findViewById<MaterialToolbar>(R.id.topAppBar)
             if(isAlternateMenuVisible){
                 toolbar.setTitle(noteAdapter.getSelectedItemsCount().toString())
             }else{
@@ -279,7 +279,7 @@ class UncategorizedFragment : Fragment(R.layout.fragment_uncategorized), MenuPro
             "creation date: from oldest"
         )
         var selectedOption = 0
-        val noteList = noteAdapter.differ.currentList
+        val noteList = noteAdapter.getNotes()
         val builder: AlertDialog.Builder = AlertDialog.Builder(requireContext())
         builder.setTitle("Sort by")
             .setPositiveButton("Sort"){dialog, which ->
@@ -300,36 +300,36 @@ class UncategorizedFragment : Fragment(R.layout.fragment_uncategorized), MenuPro
     }
 
     private fun sortByCreationDateOldest(noteList: List<Note>) {
-        return noteAdapter.differ.submitList(noteList.sortedBy { it.id })
+        return noteAdapter.updateNotes(noteList.sortedBy { it.id })
     }
 
     private fun sortByCreationDateNewest(noteList: List<Note>) {
-        return noteAdapter.differ.submitList(noteList.sortedByDescending { it.id })
+        return noteAdapter.updateNotes(noteList.sortedByDescending { it.id })
     }
 
     private fun sortByTitleZToA(noteList: List<Note>) {
-        return noteAdapter.differ.submitList(noteList.sortedByDescending { it.title })
+        return noteAdapter.updateNotes(noteList.sortedByDescending { it.title })
     }
 
     private fun sortByTitleAToZ(noteList: List<Note>) {
-        return noteAdapter.differ.submitList(noteList.sortedBy { it.title })
+        return noteAdapter.updateNotes(noteList.sortedBy { it.title })
     }
 
     private fun sortByEditDateOldest(noteList: List<Note>) {
-        return noteAdapter.differ.submitList(noteList.sortedBy { it.time })
+        return noteAdapter.updateNotes(noteList.sortedBy { it.time })
     }
 
     private fun sortByEditDateNewest(noteList: List<Note>) {
-        return noteAdapter.differ.submitList(noteList.sortedByDescending { it.time })
+        return noteAdapter.updateNotes(noteList.sortedByDescending { it.time })
     }
 
     private fun searchNote(query: String?){
         if(query != null){
             if(query.isEmpty()){
-                noteAdapter.differ.submitList(currentList)
+                noteAdapter.updateNotes(currentList)
             }else{
                 noteViewModel.searchNote("%$query%").observe(this){notes ->
-                    noteAdapter.differ.submitList(notes)
+                    noteAdapter.updateNotes(notes)
                 }
             }
         }
@@ -357,7 +357,7 @@ class UncategorizedFragment : Fragment(R.layout.fragment_uncategorized), MenuPro
     private fun exportNoteToTextFile(uri: Uri){
         var selectedNotes = noteAdapter.getSelectedItems()
         if(selectedNotes.isEmpty()){
-            selectedNotes = noteAdapter.differ.currentList.toSet()
+            selectedNotes = noteAdapter.getSelectedItems()
         }
         selectedNotes.forEach { note ->
             val fileName = "${note.title}.txt"
@@ -490,7 +490,7 @@ class UncategorizedFragment : Fragment(R.layout.fragment_uncategorized), MenuPro
                 true
             }
             R.id.selectAll -> {
-                noteAdapter.selectAllItem()
+                noteAdapter.selectAllItems()
                 isAlternateMenuVisible = true
                 changeBackNavigationIcon()
                 requireActivity().invalidateOptionsMenu()
@@ -524,7 +524,7 @@ class UncategorizedFragment : Fragment(R.layout.fragment_uncategorized), MenuPro
 
     override fun onQueryTextChange(newText: String?): Boolean {
         if(newText.isNullOrEmpty()){
-            noteAdapter.differ.submitList(currentList)
+            noteAdapter.updateNotes(currentList)
         }else{
             searchNote(newText)
         }

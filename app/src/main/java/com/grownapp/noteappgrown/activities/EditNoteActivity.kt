@@ -33,6 +33,7 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.core.text.HtmlCompat
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -123,10 +124,12 @@ class EditNoteActivity : AppCompatActivity(), OnColorClickListener {
     private val handler = Handler(Looper.getMainLooper())
     private var previousStart = -1
     private var previousEnd = -1
-    private var sort = intent.getIntExtra("sort", -1)
+
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(binding.root)
+
         setUpViewModel()
         loadNote()
         formattingBarAction()
@@ -201,7 +204,6 @@ class EditNoteActivity : AppCompatActivity(), OnColorClickListener {
             }
         }
 
-
         binding.edtContent.addTextChangedListener(object : TextWatcher{
             private var startPosition = 0
             private var endPosition = 0
@@ -235,39 +237,7 @@ class EditNoteActivity : AppCompatActivity(), OnColorClickListener {
                 }
             }
         })
-//        binding.edtTitle.addTextChangedListener(object : TextWatcher{
-//            private var startPosition = 0
-//            private var endPosition = 0
-//            override fun beforeTextChanged(p0: CharSequence?, start: Int, count: Int, after: Int) {
-//                if(!isUndo){
-//                    textUndo.add(
-//                        Pair(binding.edtTitle.text.toString(), binding.edtTitle.selectionStart)
-//                    )
-//                }else{
-//                    isUndo = false
-//                }
-//
-//                startPosition = start
-//                endPosition = start + after
-//            }
-//
-//            override fun onTextChanged(p0: CharSequence?, p1: Int, p2: Int, p3: Int) {
-//
-//            }
-//
-//            override fun afterTextChanged(p0: Editable?) {
-//                applyCurrentStylesForTitle(startPosition, endPosition)
-//                if(currentTextColor != null){
-//                    applyTextColor(startPosition, endPosition)
-//                }
-//                if(currentBackgroundColor != null){
-//                    applyBackgroundColor(startPosition, endPosition)
-//                }
-//                if(currentTextSize != null){
-//                    applyTextSize(startPosition, endPosition)
-//                }
-//            }
-//        })
+
         startSelectionMonitor()
     }
 
@@ -278,229 +248,75 @@ class EditNoteActivity : AppCompatActivity(), OnColorClickListener {
         applyCurrentStylesForContent(start, end)
     }
 
-//    private fun toggleStyleForTitle(style: String){
-//        styleStates[style] = !(styleStates[style]?:false)
-//        val start = binding.edtTitle.selectionStart
-//        val end = binding.edtTitle.selectionEnd
-//        applyCurrentStylesForTitle(start, end)
-//    }
-
     private fun applyCurrentStylesForContent(start: Int, end: Int) {
         val text = binding.edtContent.text
         if (text is Spannable) {
-            var isCursorOnly = start == end
-            if (styleStates["BOLD"] == true) {
-                binding.bold.setBackgroundColor(ContextCompat.getColor(this, R.color.enable))
-                if (isCursorOnly) {
-                    if (text.getSpans(start, end, StyleSpan::class.java)
-                            .none { it.style == Typeface.BOLD }
-                    ) {
-                        text.setSpan(StyleSpan(Typeface.BOLD), start, end, Spannable.SPAN_MARK_MARK)
+            // Lặp qua tất cả các vị trí trong vùng chọn
+            for (i in start until end) {
+                if (!text[i].isWhitespace()) {
+                    // Xóa hiệu ứng hiện tại nếu đã có
+                    val boldSpans = text.getSpans(i, i + 1, StyleSpan::class.java).filter { it.style == Typeface.BOLD }
+                    if (styleStates["BOLD"] == true) {
+                        if (boldSpans.isEmpty()) {
+                            text.setSpan(StyleSpan(Typeface.BOLD), i, i + 1, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+                        }
+                        binding.bold.setBackgroundColor(ContextCompat.getColor(this, R.color.enable))
+                    } else {
+                        boldSpans.forEach { text.removeSpan(it) }
                     }
-                } else {
-                    text.getSpans(start, end, StyleSpan::class.java).forEach {
-                        if (it.style == Typeface.BOLD) text.removeSpan(it)
+
+                    val italicSpans = text.getSpans(i, i + 1, StyleSpan::class.java).filter { it.style == Typeface.ITALIC }
+                    if (styleStates["ITALIC"] == true) {
+                        if (italicSpans.isEmpty()) {
+                            text.setSpan(StyleSpan(Typeface.ITALIC), i, i + 1, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+                        }
+                        binding.italic.setBackgroundColor(ContextCompat.getColor(this, R.color.enable))
+                    } else {
+                        italicSpans.forEach { text.removeSpan(it) }
                     }
-                    text.setSpan(
-                        StyleSpan(Typeface.BOLD),
-                        start,
-                        end,
-                        Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
-                    )
-                }
-            } else {
-                binding.bold.setBackgroundColor(Color.TRANSPARENT)
-                if (!isCursorOnly) {
-                    text.getSpans(start, end, StyleSpan::class.java).forEach {
-                        if (it.style == Typeface.BOLD) text.removeSpan(it)
+
+                    val underlineSpans = text.getSpans(i, i + 1, UnderlineSpan::class.java)
+                    if (styleStates["UNDERLINE"] == true) {
+                        if (underlineSpans.isEmpty()) {
+                            text.setSpan(UnderlineSpan(), i, i + 1, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+                        }
+                        binding.underline.setBackgroundColor(ContextCompat.getColor(this, R.color.enable))
+                    } else {
+                        underlineSpans.forEach { text.removeSpan(it) }
                     }
-                }
-            }
-            if (styleStates["ITALIC"] == true) {
-                binding.italic.setBackgroundColor(ContextCompat.getColor(this, R.color.enable))
-                if (isCursorOnly) {
-                    if (text.getSpans(start, end, StyleSpan::class.java)
-                            .none { it.style == Typeface.ITALIC }
-                    ) {
-                        text.setSpan(
-                            StyleSpan(Typeface.ITALIC),
-                            start,
-                            end,
-                            Spannable.SPAN_MARK_MARK
-                        )
+
+                    val strikethroughSpans = text.getSpans(i, i + 1, StrikethroughSpan::class.java)
+                    if (styleStates["STRIKETHROUGH"] == true) {
+                        if (strikethroughSpans.isEmpty()) {
+                            text.setSpan(StrikethroughSpan(), i, i + 1, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+                        }
+                        binding.strikeThrough.setBackgroundColor(ContextCompat.getColor(this, R.color.enable))
+                    } else {
+                        strikethroughSpans.forEach { text.removeSpan(it) }
                     }
-                } else {
-                    text.getSpans(start, end, StyleSpan::class.java).forEach {
-                        if (it.style == Typeface.ITALIC) text.removeSpan(it)
+
+                    val textColorSpans = text.getSpans(i, i + 1, ForegroundColorSpan::class.java)
+                    if (styleStates["TEXTCOLOR"] == true && currentTextColor != null) {
+                        if (textColorSpans.isEmpty() || textColorSpans.none { it.foregroundColor == currentTextColor }) {
+                            text.setSpan(ForegroundColorSpan(currentTextColor!!), i, i + 1, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+                        }
+                    } else {
+                        textColorSpans.forEach { text.removeSpan(it) }
                     }
-                    text.setSpan(
-                        StyleSpan(Typeface.ITALIC),
-                        start,
-                        end,
-                        Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
-                    )
-                }
-            } else {
-                binding.italic.setBackgroundColor(Color.TRANSPARENT)
-                if (!isCursorOnly) {
-                    text.getSpans(start, end, StyleSpan::class.java).forEach {
-                        if (it.style == Typeface.ITALIC) text.removeSpan(it)
+
+                    val backgroundColorSpans = text.getSpans(i, i + 1, BackgroundColorSpan::class.java)
+                    if (styleStates["FILLCOLOR"] == true && currentBackgroundColor != null) {
+                        if (backgroundColorSpans.isEmpty() || backgroundColorSpans.none { it.backgroundColor == currentBackgroundColor }) {
+                            text.setSpan(BackgroundColorSpan(currentBackgroundColor!!), i, i + 1, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+                        }
+                    } else {
+                        backgroundColorSpans.forEach { text.removeSpan(it) }
                     }
-                }
-            }
-            if (styleStates["UNDERLINE"] == true) {
-                binding.underline.setBackgroundColor(ContextCompat.getColor(this, R.color.enable))
-                if (isCursorOnly) {
-                    if (text.getSpans(start, end, UnderlineSpan::class.java).isEmpty()) {
-                        text.setSpan(UnderlineSpan(), start, end, Spannable.SPAN_MARK_MARK)
-                    }
-                } else {
-                    text.getSpans(start, end, UnderlineSpan::class.java)
-                        .forEach { text.removeSpan(it) }
-                    text.setSpan(UnderlineSpan(), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
-                }
-            } else {
-                binding.underline.setBackgroundColor(Color.TRANSPARENT)
-                if (!isCursorOnly) {
-                    text.getSpans(start, end, UnderlineSpan::class.java)
-                        .forEach { text.removeSpan(it) }
-                }
-            }
-            if (styleStates["STRIKETHROUGH"] == true) {
-                binding.strikeThrough.setBackgroundColor(ContextCompat.getColor(this, R.color.enable))
-                if (isCursorOnly) {
-                    if (text.getSpans(start, end, StrikethroughSpan::class.java).isEmpty()) {
-                        text.setSpan(StrikethroughSpan(), start, end, Spannable.SPAN_MARK_MARK)
-                    }
-                } else {
-                    text.setSpan(
-                        StrikethroughSpan(),
-                        start,
-                        end,
-                        Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
-                    )
-                }
-            } else {
-                binding.strikeThrough.setBackgroundColor(Color.TRANSPARENT)
-                if (!isCursorOnly) {
-                    text.getSpans(start, end, StrikethroughSpan::class.java)
-                        .forEach { text.removeSpan(it) }
-                }
-            }
-            if(styleStates["FILLCOLOR"] == true){
-//                onFillColorSelected(currentBackgroundColor!!)
-            }
-            if(styleStates["TEXTCOLOR"] == true){
-                currentTextColor?.let { color ->
-                    text.setSpan(ForegroundColorSpan(color), start, end, Spannable.SPAN_INCLUSIVE_INCLUSIVE)
                 }
             }
         }
     }
-//    private fun applyCurrentStylesForTitle(start: Int, end: Int) {
-//        val text = binding.edtTitle.text
-//        if (text is Spannable) {
-//            var isCursorOnly = start == end
-//            if (styleStates["BOLD"] == true) {
-//                binding.bold.setBackgroundColor(ContextCompat.getColor(this, R.color.enable))
-//                if (isCursorOnly) {
-//                    if (text.getSpans(start, end, StyleSpan::class.java)
-//                            .none { it.style == Typeface.BOLD }
-//                    ) {
-//                        text.setSpan(StyleSpan(Typeface.BOLD), start, end, Spannable.SPAN_MARK_MARK)
-//                    }
-//                } else {
-//                    text.getSpans(start, end, StyleSpan::class.java).forEach {
-//                        if (it.style == Typeface.BOLD) text.removeSpan(it)
-//                    }
-//                    text.setSpan(
-//                        StyleSpan(Typeface.BOLD),
-//                        start,
-//                        end,
-//                        Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
-//                    )
-//                }
-//            } else {
-//                binding.bold.setBackgroundColor(Color.TRANSPARENT)
-//                if (!isCursorOnly) {
-//                    text.getSpans(start, end, StyleSpan::class.java).forEach {
-//                        if (it.style == Typeface.BOLD) text.removeSpan(it)
-//                    }
-//                }
-//            }
-//            if (styleStates["ITALIC"] == true) {
-//                binding.italic.setBackgroundColor(ContextCompat.getColor(this, R.color.enable))
-//                if (isCursorOnly) {
-//                    if (text.getSpans(start, end, StyleSpan::class.java)
-//                            .none { it.style == Typeface.ITALIC }
-//                    ) {
-//                        text.setSpan(
-//                            StyleSpan(Typeface.ITALIC),
-//                            start,
-//                            end,
-//                            Spannable.SPAN_MARK_MARK
-//                        )
-//                    }
-//                } else {
-//                    text.getSpans(start, end, StyleSpan::class.java).forEach {
-//                        if (it.style == Typeface.ITALIC) text.removeSpan(it)
-//                    }
-//                    text.setSpan(
-//                        StyleSpan(Typeface.ITALIC),
-//                        start,
-//                        end,
-//                        Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
-//                    )
-//                }
-//            } else {
-//                binding.italic.setBackgroundColor(Color.TRANSPARENT)
-//                if (!isCursorOnly) {
-//                    text.getSpans(start, end, StyleSpan::class.java).forEach {
-//                        if (it.style == Typeface.ITALIC) text.removeSpan(it)
-//                    }
-//                }
-//            }
-//            if (styleStates["UNDERLINE"] == true) {
-//                binding.underline.setBackgroundColor(ContextCompat.getColor(this, R.color.enable))
-//                if (isCursorOnly) {
-//                    if (text.getSpans(start, end, UnderlineSpan::class.java).isEmpty()) {
-//                        text.setSpan(UnderlineSpan(), start, end, Spannable.SPAN_MARK_MARK)
-//                    }
-//                } else {
-//                    text.getSpans(start, end, UnderlineSpan::class.java)
-//                        .forEach { text.removeSpan(it) }
-//                    text.setSpan(UnderlineSpan(), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
-//                }
-//            } else {
-//                binding.underline.setBackgroundColor(Color.TRANSPARENT)
-//                if (!isCursorOnly) {
-//                    text.getSpans(start, end, UnderlineSpan::class.java)
-//                        .forEach { text.removeSpan(it) }
-//                }
-//            }
-//            if (styleStates["STRIKETHROUGH"] == true) {
-//                binding.strikeThrough.setBackgroundColor(ContextCompat.getColor(this, R.color.enable))
-//                if (isCursorOnly) {
-//                    if (text.getSpans(start, end, StrikethroughSpan::class.java).isEmpty()) {
-//                        text.setSpan(StrikethroughSpan(), start, end, Spannable.SPAN_MARK_MARK)
-//                    }
-//                } else {
-//                    text.setSpan(
-//                        StrikethroughSpan(),
-//                        start,
-//                        end,
-//                        Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
-//                    )
-//                }
-//            } else {
-//                binding.strikeThrough.setBackgroundColor(Color.TRANSPARENT)
-//                if (!isCursorOnly) {
-//                    text.getSpans(start, end, StrikethroughSpan::class.java)
-//                        .forEach { text.removeSpan(it) }
-//                }
-//            }
-//        }
-//    }
+
 
     private fun setUpViewModel() {
         val noteRepository = NoteRepository(NoteDatabase(this))
@@ -532,7 +348,14 @@ class EditNoteActivity : AppCompatActivity(), OnColorClickListener {
     }
 
     private fun undoAll() {
-        binding.edtContent.setText(currentContent)
+        while (textUndo.isNotEmpty()){
+            isUndo = true
+            val (previousText, previousCursorPosition) = textUndo.removeLast()
+            textRedo.add(Pair(previousText, previousCursorPosition))
+            binding.edtContent.setText(previousText)
+            binding.edtContent.setSelection(previousCursorPosition)
+        }
+
     }
 
     private fun undoNote() {
@@ -554,12 +377,14 @@ class EditNoteActivity : AppCompatActivity(), OnColorClickListener {
         }
     }
 
+
     private fun saveNote() {
         val id = intent.getIntExtra("id", 0)
         val created = intent.getStringExtra("created")
         val color = noteViewModel.getColor(id)
         val noteTitle = binding.edtTitle.text.toString()
-        val noteContent = Html.toHtml(binding.edtContent.text)
+        val noteContent = HtmlCompat.toHtml(binding.edtContent.text as Spannable, HtmlCompat.TO_HTML_PARAGRAPH_LINES_CONSECUTIVE
+        )
         if(id == 0){
             val note = Note(
                 noteViewModel.getLatestId(),
@@ -754,6 +579,7 @@ class EditNoteActivity : AppCompatActivity(), OnColorClickListener {
         }else{
             noteViewModel.getNoteById(id).content
         }
+        println(content)
         if(color != null){
             val backgroundDrawable = GradientDrawable()
             backgroundDrawable.setColor(Color.parseColor(color))
@@ -764,22 +590,14 @@ class EditNoteActivity : AppCompatActivity(), OnColorClickListener {
         }
         currentContent = content
         binding.edtTitle.setText(title)
-        binding.edtContent.setText(Html.fromHtml(content, Html.FROM_HTML_MODE_LEGACY))
+        binding.edtContent.setText(HtmlCompat.fromHtml(content, HtmlCompat.FROM_HTML_MODE_COMPACT))
+
     }
 
     private fun formattingBarAction() {
         binding.bold.setOnClickListener {
             toggleStyleForContent("BOLD")
-//            if(isBoldEnabled){
-//                val start = binding.edtContent.selectionStart
-//                val end = binding.edtContent.selectionEnd
-//                applyStyleToRange(Typeface.BOLD, binding.edtContent,start,end)
-//                binding.bold.setBackgroundColor(ContextCompat.getColor(this, R.color.enable))
-//            }else{
-//                applyStyle(Typeface.BOLD, binding.edtContent)
-//                isBoldEnabled = false
-//                binding.bold.setBackgroundColor(Color.TRANSPARENT)
-//            }
+
         }
         binding.italic.setOnClickListener {
             toggleStyleForContent("ITALIC")
@@ -826,8 +644,7 @@ class EditNoteActivity : AppCompatActivity(), OnColorClickListener {
                 dialog.dismiss()
             }.setPositiveButton("OK"){dialog, _ ->
                 if(isRemove) {
-//                    selectedFormatTextColor = null
-//                    currentBackgroundColor = null
+
                     dialog.dismiss()
                 }else{
                     setupColorForEditText(binding.edtContent, imageView)
@@ -864,11 +681,11 @@ class EditNoteActivity : AppCompatActivity(), OnColorClickListener {
     private fun setupColorForEditText(editText: EditText, imageView: ImageView) {
         selectedFormatTextColor.let { color ->
             if(selectedFormatTextColor.isNullOrEmpty()){
-//                changeColorSelected(editText, "#000000", imageView)
+
 
             }else{
                 changeColorSelected(editText, color, imageView)
-//                imageView.setBackgroundColor(Color.parseColor(color))
+
             }
         }
     }
@@ -878,12 +695,12 @@ class EditNoteActivity : AppCompatActivity(), OnColorClickListener {
         val start = editText.selectionStart
         val end = editText.selectionEnd
 
-        // Xóa các màu nền cũ trong vùng chọn (nếu có)
+
         spannable.getSpans(start, end, BackgroundColorSpan::class.java).forEach { span ->
             spannable.removeSpan(span)
         }
 
-        // Áp dụng màu nền mới
+
         spannable.setSpan(BackgroundColorSpan(color), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
     }
 
@@ -968,42 +785,6 @@ class EditNoteActivity : AppCompatActivity(), OnColorClickListener {
             }
         builder.create().show()
     }
-//    private fun showFormatTextSizeDialogForTitle(editText: EditText) {
-//        val dialogView = layoutInflater.inflate(R.layout.dialog_format_text_size, null)
-//        val defaultSize = dialogView.findViewById<Button>(R.id.defaultSizeBtn)
-//        val textSize = dialogView.findViewById<SeekBar>(R.id.sbTextSize)
-//        val textPreview = dialogView.findViewById<TextView>(R.id.textPreview)
-//        textPreview.text = "Text size $selectedTextSize"
-//        defaultSize.setOnClickListener {
-//            selectedTextSize = 18
-//            textPreview.text = "Text size $selectedTextSize"
-//            textSize.progress = 18
-//        }
-//        textSize.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener{
-//            override fun onProgressChanged(p0: SeekBar?, p1: Int, p2: Boolean) {
-//                textPreview.text = "Text size $p1"
-//                textPreview.textSize = p1.toFloat()
-//                selectedTextSize = p1
-//            }
-//
-//            override fun onStartTrackingTouch(p0: SeekBar?) {
-//
-//            }
-//
-//            override fun onStopTrackingTouch(p0: SeekBar?) {
-//
-//            }
-//        })
-//        val builder = AlertDialog.Builder(this)
-//            .setView(dialogView)
-//            .setNegativeButton("Cancel"){dialog, _ ->
-//                dialog.dismiss()
-//            }.setPositiveButton("OK"){dialog, _ ->
-//                changeTextSizeForTitle(editText, selectedTextSize)
-//                dialog.dismiss()
-//            }
-//        builder.create().show()
-//    }
 
     private fun changeTextSizeForContent(editText: EditText, size: Int) {
         onTextSizeSelected(size)
@@ -1019,20 +800,7 @@ class EditNoteActivity : AppCompatActivity(), OnColorClickListener {
             )
         }
     }
-//    private fun changeTextSizeForTitle(editText: EditText, size: Int) {
-//        onTextSizeSelected(size)
-//        val start = binding.edtTitle.selectionStart
-//        val end = binding.edtTitle.selectionEnd
-//        if(start < end){
-//            val spannable = editText.text as Spannable
-//            spannable.setSpan(
-//                AbsoluteSizeSpan(size, true),
-//                start,
-//                end,
-//                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
-//            )
-//        }
-//    }
+
 
     private fun applyUnderline() {
         val start = binding.edtContent.selectionStart
@@ -1047,36 +815,7 @@ class EditNoteActivity : AppCompatActivity(), OnColorClickListener {
     }
 
     private fun applyStyle(style: Int, editText: EditText, applyToAll: Boolean = false) {
-//        val text = editText.text
-//        if(text is Spannable){
-//            var start = editText.selectionStart
-//            var end = editText.selectionEnd
-//            var minStart = editText.text.length
-//            var maxEnd = 0
-//
-//            Log.d("span", "selection start: $start")
-//            Log.d("span", "selection end: $end")
-//            val styleSpans = text.getSpans(start, end, StyleSpan::class.java)
-//            var styleExists = false
-//            for (span in styleSpans){
-//                minStart = min(minStart, text.getSpanStart(span))
-//                maxEnd = max(maxEnd, text.getSpanEnd(span))
-//                Log.d("span", "minStart: $minStart")
-//                Log.d("span", "maxEnd: $maxEnd")
-//                if(span.style == style){
-//                    text.removeSpan(span)
-//                    styleExists = true
-//                }
-//            }
-//            if(start > minStart) start = minStart
-//            if(end < maxEnd) end = maxEnd
-//
-//            Log.d("span", "start: $start")
-//            Log.d("span", "end: $end")
-//            if(!styleExists){
-//                text.setSpan(StyleSpan(style), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
-//            }
-//        }
+
         val text = editText.text
         if (text is Spannable) {
             val start = editText.selectionStart
@@ -1145,29 +884,55 @@ class EditNoteActivity : AppCompatActivity(), OnColorClickListener {
     override fun onColorClick(color: String, imageView: ImageView) {
     }
 
-    private fun applyTextColor(start: Int, end: Int){
+    private fun applyTextColor(start: Int, end: Int) {
         val text = binding.edtContent.text
-        if(text is Spannable && currentTextColor != null){
-            text.setSpan(ForegroundColorSpan(currentTextColor!!), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+        if (text is Spannable && currentTextColor != null) {
+
+            text.getSpans(start, end, ForegroundColorSpan::class.java).forEach { span ->
+                text.removeSpan(span)
+            }
+
+
+            for (i in start until end) {
+                if (!text[i].isWhitespace()) {
+                    text.setSpan(ForegroundColorSpan(currentTextColor!!), i, i + 1, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+                }
+            }
         }
     }
 
-    private fun applyBackgroundColor(start: Int, end: Int){
+    private fun applyBackgroundColor(start: Int, end: Int) {
         val text = binding.edtContent.text
-        if(text is Spannable && currentBackgroundColor != null){
+        if (text is Spannable && currentBackgroundColor != null) {
+
             text.getSpans(start, end, BackgroundColorSpan::class.java).forEach { span ->
                 text.removeSpan(span)
             }
-            text.setSpan(BackgroundColorSpan(currentBackgroundColor!!), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+
+            for (i in start until end) {
+                if (!text[i].isWhitespace()) {
+                    text.setSpan(BackgroundColorSpan(currentBackgroundColor!!), i, i + 1, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+                }
+            }
         }
     }
 
-    private fun applyTextSize(start: Int, end: Int){
+    private fun applyTextSize(start: Int, end: Int) {
         val text = binding.edtContent.text
-        if(text is Spannable && currentTextSize != null){
-            text.setSpan(AbsoluteSizeSpan(currentTextSize!!.toInt(), true), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+        if (text is Spannable && currentTextSize != null) {
+
+            text.getSpans(start, end, AbsoluteSizeSpan::class.java).forEach { span ->
+                text.removeSpan(span)
+            }
+
+            for (i in start until end) {
+                if (!text[i].isWhitespace()) {
+                    text.setSpan(AbsoluteSizeSpan(currentTextSize!!.toInt(), true), i, i + 1, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+                }
+            }
         }
     }
+
     private fun applyTextColorForTitle(start: Int, end: Int){
         val text = binding.edtTitle.text
         if(text is Spannable && currentTextColor != null){
@@ -1223,14 +988,13 @@ class EditNoteActivity : AppCompatActivity(), OnColorClickListener {
                 val start = binding.edtContent.selectionStart
                 val end = binding.edtContent.selectionEnd
 
-                // Chỉ kiểm tra khi vùng chọn thay đổi
+
                 if (start != previousStart || end != previousEnd) {
                     binding.bold.setBackgroundColor(Color.TRANSPARENT)
                     binding.italic.setBackgroundColor(Color.TRANSPARENT)
                     binding.underline.setBackgroundColor(Color.TRANSPARENT)
                     binding.strikeThrough.setBackgroundColor(Color.TRANSPARENT)
-//                    binding.fillColor.setBackgroundColor(Color.TRANSPARENT)
-//                    binding.textColor.setBackgroundColor(Color.TRANSPARENT)
+
 
                     if(isSingleEffectAppliedOnly(binding.edtContent, start, end)){
                         checkTextStyle(start, end)
@@ -1239,7 +1003,6 @@ class EditNoteActivity : AppCompatActivity(), OnColorClickListener {
                     }
                 }
 
-                // Kiểm tra lại sau mỗi 100ms
                 handler.postDelayed(this, 100)
             }
         })
@@ -1248,31 +1011,31 @@ class EditNoteActivity : AppCompatActivity(), OnColorClickListener {
         if (start < end) {
             val spannable = binding.edtContent.text as Spannable
 
-            // Kiểm tra in đậm
+
             val boldSpans = spannable.getSpans(start, end, StyleSpan::class.java).filter { it.style == Typeface.BOLD }
             val isBoldOnly = boldSpans.isNotEmpty() && boldSpans.all { spannable.getSpanStart(it) <= start && spannable.getSpanEnd(it) >= end }
 
-            // Kiểm tra in nghiêng
+
             val italicSpans = spannable.getSpans(start, end, StyleSpan::class.java).filter { it.style == Typeface.ITALIC }
             val isItalicOnly = italicSpans.isNotEmpty() && italicSpans.all { spannable.getSpanStart(it) <= start && spannable.getSpanEnd(it) >= end }
 
-            // Kiểm tra gạch chân (underline)
+
             val underlineSpans = spannable.getSpans(start, end, UnderlineSpan::class.java)
             val isUnderlineOnly = underlineSpans.isNotEmpty() && underlineSpans.all { spannable.getSpanStart(it) <= start && spannable.getSpanEnd(it) >= end }
 
-            // Kiểm tra gạch ngang (strikethrough)
+
             val strikeSpans = spannable.getSpans(start, end, StrikethroughSpan::class.java)
             val isStrikethroughOnly = strikeSpans.isNotEmpty() && strikeSpans.all { spannable.getSpanStart(it) <= start && spannable.getSpanEnd(it) >= end }
 
-            // Kiểm tra màu nền (fill color)
+
             val backgroundColorSpans = spannable.getSpans(start, end, BackgroundColorSpan::class.java)
             val isBackgroundOnly = backgroundColorSpans.isNotEmpty() && backgroundColorSpans.all { spannable.getSpanStart(it) <= start && spannable.getSpanEnd(it) >= end }
 
-            // Kiểm tra màu chữ (text color)
+
             val colorSpans = spannable.getSpans(start, end, ForegroundColorSpan::class.java)
             val isColorOnly = colorSpans.isNotEmpty() && colorSpans.all { spannable.getSpanStart(it) <= start && spannable.getSpanEnd(it) >= end }
 
-            // Kiểm tra kích thước chữ (text size)
+
             val sizeSpans = spannable.getSpans(start, end, AbsoluteSizeSpan::class.java)
             val isSizeOnly = sizeSpans.isNotEmpty() && sizeSpans.all { spannable.getSpanStart(it) <= start && spannable.getSpanEnd(it) >= end }
 
@@ -1291,41 +1054,41 @@ class EditNoteActivity : AppCompatActivity(), OnColorClickListener {
     fun isSingleEffectAppliedOnly(editText: EditText, start: Int, end: Int): Boolean {
         val spannable = editText.text as Spannable
 
-        // Kiểm tra toàn bộ vùng chọn chỉ có kiểu in đậm
+
         val boldSpans = spannable.getSpans(start, end, StyleSpan::class.java).filter { it.style == Typeface.BOLD }
         val isBoldOnly = boldSpans.isNotEmpty() && boldSpans.all { spannable.getSpanStart(it) <= start && spannable.getSpanEnd(it) >= end }
 
-        // Kiểm tra toàn bộ vùng chọn chỉ có kiểu in nghiêng
+
         val italicSpans = spannable.getSpans(start, end, StyleSpan::class.java).filter { it.style == Typeface.ITALIC }
         val isItalicOnly = italicSpans.isNotEmpty() && italicSpans.all { spannable.getSpanStart(it) <= start && spannable.getSpanEnd(it) >= end }
 
-        // Kiểm tra toàn bộ vùng chọn chỉ có màu chữ (text color)
+
         val colorSpans = spannable.getSpans(start, end, ForegroundColorSpan::class.java)
         val isColorOnly = colorSpans.isNotEmpty() && colorSpans.size == 1 &&
                 spannable.getSpanStart(colorSpans[0]) <= start && spannable.getSpanEnd(colorSpans[0]) >= end
 
-        // Kiểm tra toàn bộ vùng chọn chỉ có màu nền (fill color)
+
         val backgroundColorSpans = spannable.getSpans(start, end, BackgroundColorSpan::class.java)
         val isBackgroundOnly = backgroundColorSpans.isNotEmpty() && backgroundColorSpans.all { spannable.getSpanStart(it) <= start && spannable.getSpanEnd(it) >= end }
 
-        // Kiểm tra toàn bộ vùng chọn chỉ có kiểu gạch chân (underline)
+
         val underlineSpans = spannable.getSpans(start, end, UnderlineSpan::class.java)
         val isUnderlineOnly = underlineSpans.isNotEmpty() && underlineSpans.all { spannable.getSpanStart(it) <= start && spannable.getSpanEnd(it) >= end }
 
-        // Kiểm tra toàn bộ vùng chọn chỉ có kiểu gạch ngang (strikethrough)
+
         val strikeSpans = spannable.getSpans(start, end, StrikethroughSpan::class.java)
         val isStrikethroughOnly = strikeSpans.isNotEmpty() && strikeSpans.all { spannable.getSpanStart(it) <= start && spannable.getSpanEnd(it) >= end }
 
-        // Kiểm tra toàn bộ vùng chọn chỉ có kích thước chữ duy nhất (text size)
+
         val sizeSpans = spannable.getSpans(start, end, AbsoluteSizeSpan::class.java)
         val isSizeOnly = sizeSpans.isNotEmpty() && sizeSpans.all { spannable.getSpanStart(it) <= start && spannable.getSpanEnd(it) >= end }
 
-        // Trả về true nếu chỉ có một loại hiệu ứng duy nhất áp dụng cho toàn bộ vùng chọn
+
         return listOf(isBoldOnly, isItalicOnly, isColorOnly, isBackgroundOnly, isUnderlineOnly, isStrikethroughOnly, isSizeOnly).count { it } == 1
     }
     override fun onDestroy() {
         super.onDestroy()
-        handler.removeCallbacksAndMessages(null) // Ngừng kiểm tra khi Activity bị hủy
+        handler.removeCallbacksAndMessages(null)
     }
 
     fun onFillColorSelected(color: Int) {
@@ -1333,8 +1096,8 @@ class EditNoteActivity : AppCompatActivity(), OnColorClickListener {
         val start = binding.edtContent.selectionStart
         val end = binding.edtContent.selectionEnd
 
-        // Gọi applyBackgroundColor ngay lập tức để áp dụng màu nền
-        if (start != end) {  // Chỉ áp dụng khi có vùng chọn
+
+        if (start != end) {
             applyBackgroundColor(start, end)
         }
     }

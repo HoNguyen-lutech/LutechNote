@@ -11,8 +11,6 @@ import android.widget.RadioGroup
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
-import androidx.recyclerview.widget.AsyncListDiffer
-import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
 import com.grownapp.noteappgrown.R
 import com.grownapp.noteappgrown.activities.MainActivity
@@ -20,17 +18,10 @@ import com.grownapp.noteappgrown.models.Note
 import com.grownapp.noteappgrown.viewmodel.CategoryViewModel
 import com.grownapp.noteappgrown.viewmodel.NoteViewModel
 
-class ListNoteAdapter(private val context: Context, private val onItemClickListener: com.grownapp.noteappgrown.listeners.OnItemClickListener) : RecyclerView.Adapter<ListNoteAdapter.viewHolder>() {
-    private val differCallBack = object : DiffUtil.ItemCallback<Note>(){
-        override fun areItemsTheSame(oldItem: Note, newItem: Note): Boolean {
-            return oldItem.id == newItem.id && oldItem.content == newItem.content && oldItem.title == newItem.title
-        }
-        override fun areContentsTheSame(oldItem: Note, newItem: Note): Boolean {
-            return oldItem == newItem
-        }
-    }
-
-    val differ = AsyncListDiffer(this, differCallBack)
+class ListNoteAdapter(
+    private val context: Context,
+    private val onItemClickListener: com.grownapp.noteappgrown.listeners.OnItemClickListener) : RecyclerView.Adapter<ListNoteAdapter.viewHolder>() {
+    private val notes: MutableList<Note> = mutableListOf()
     private lateinit var categoryViewModel: CategoryViewModel
     private lateinit var noteViewModel: NoteViewModel
     var isCreated = false
@@ -53,21 +44,25 @@ class ListNoteAdapter(private val context: Context, private val onItemClickListe
     }
 
     override fun getItemCount(): Int {
-        return differ.currentList.size
+        return notes.size
     }
 
     override fun onBindViewHolder(holder: ListNoteAdapter.viewHolder, position: Int) {
-        if(differ.currentList[position].title == ""){
-            holder.title.text = context.getString(R.string.untitled)
+        val note = notes[position]
+
+        holder.title.text = if(note.title.isEmpty()){
+            context.getString(R.string.untitled)
         }else{
-            holder.title.text = differ.currentList[position].title
+            note.title
         }
-        if(!isCreated){
-            holder.time.text = context.getString(R.string.last_edit) + differ.currentList[position].time
+
+        holder.time.text = if (!isCreated){
+            context.getString(R.string.last_edit) + note.time
         }else{
-            holder.time.text = context.getString(R.string.created) + differ.currentList[position].created
+            context.getString(R.string.created) + note.created
         }
-        val categoryList = categoryViewModel.getCategoryNameById(differ.currentList[position].id)
+
+        val categoryList = categoryViewModel.getCategoryNameById(note.id)
         if(categoryList.size > 2){
             holder.category.text = "${categoryList[0]}, ${categoryList[1]}, (+${categoryList.size - 2}"
         }else{
@@ -77,9 +72,7 @@ class ListNoteAdapter(private val context: Context, private val onItemClickListe
                 holder.category.text = null
             }
         }
-
-        val backgroundColor = differ.currentList[position].color
-
+        val backgroundColor = note.color
 
         val defaultDrawable = GradientDrawable().apply {
             shape = GradientDrawable.RECTANGLE
@@ -95,7 +88,6 @@ class ListNoteAdapter(private val context: Context, private val onItemClickListe
                 ContextCompat.getColor(context, R.color.brownEarth)
             )
         }
-
 
         val selectedDrawable = GradientDrawable().apply {
             shape = GradientDrawable.RECTANGLE
@@ -114,75 +106,75 @@ class ListNoteAdapter(private val context: Context, private val onItemClickListe
             )
         }
 
-
-        if (selectedItems.contains(differ.currentList[position])) {
-            holder.noteLayout.background = selectedDrawable
-        } else {
-            holder.noteLayout.background = defaultDrawable
+        holder.noteLayout.background = if(selectedItems.contains(note)){
+            selectedDrawable
+        }else{
+            defaultDrawable
         }
-
 
         holder.itemView.setOnLongClickListener {
             isChoosing = true
-            toggleSelection(differ.currentList[position])
-            onItemClickListener.onNoteLongClick(differ.currentList[position])
+            toggleSelection(note)
+            onItemClickListener.onNoteLongClick(note)
             notifyItemChanged(position)
             true
         }
 
-
-        holder.itemView.isSelected = selectedItems.contains(differ.currentList[position])
+        holder.itemView.isSelected = selectedItems.contains(note)
         holder.itemView.setOnClickListener {
             if(holder.itemView.isSelected){
-                if(selectedItems.contains(differ.currentList[position])){
-                    selectedItems.remove(differ.currentList[position])
-                }
+                selectedItems.remove(note)
                 notifyItemChanged(position)
             }else{
                 if(isChoosing){
-                    selectedItems.add(differ.currentList[position])
+                    selectedItems.add(note)
                     notifyDataSetChanged()
                 }else{
-                    if (isInTrash){
+                    if(isInTrash){
                         showActionDialog(context, position)
                     }
                 }
             }
-            onItemClickListener.onNoteClick(differ.currentList[position],holder.itemView.isSelected)
-        }
-        holder.itemView.setOnLongClickListener {
-            isChoosing = true
-            toggleSelection(differ.currentList[position])
-            onItemClickListener.onNoteLongClick(differ.currentList[position])
-            notifyItemChanged(position)
-            true
+            onItemClickListener.onNoteClick(note, holder.itemView.isSelected)
         }
     }
 
-    fun removeSelectedItems(){
-        val newList = differ.currentList.toMutableList().apply {
-            removeAll(selectedItems)
-        }
-        differ.submitList(newList)
-        selectedItems.clear()
+    fun updateNotes(newNotes: List<Note>){
+        notes.clear()
+        notes.addAll(newNotes)
+        notifyDataSetChanged()
     }
+
+    fun removeSelectedItems(){
+        notes.removeAll(selectedItems)
+        selectedItems.clear()
+        notifyDataSetChanged()
+    }
+
     fun getSelectedItemsCount(): Int{
         return selectedItems.size
     }
+
     fun getSelectedItems(): Set<Note>{
         return selectedItems
     }
+
+    fun getNotes(): List<Note>{
+        return notes
+    }
+
     fun clearSelection(){
         selectedItems.clear()
         notifyDataSetChanged()
     }
-    fun selectAllItem(){
+
+    fun selectAllItems(){
         if(selectedItems.isEmpty()){
-            selectedItems.addAll(differ.currentList)
+            selectedItems.addAll(notes)
         }else{
-            if(selectedItems.size < differ.currentList.size){
+            if(selectedItems.size < notes.size){
                 selectedItems.clear()
-                selectedItems.addAll(differ.currentList)
+                selectedItems.addAll(notes)
             }else{
                 selectedItems.clear()
             }
@@ -190,7 +182,7 @@ class ListNoteAdapter(private val context: Context, private val onItemClickListe
         notifyDataSetChanged()
     }
 
-    private fun toggleSelection(note: Note) {
+    fun toggleSelection(note: Note) {
         if(selectedItems.contains(note)){
             selectedItems.remove(note)
         }else{
@@ -200,20 +192,24 @@ class ListNoteAdapter(private val context: Context, private val onItemClickListe
     }
 
     private fun showActionDialog(context: Context, position: Int) {
+        val note = notes[position]
         val dialogView = LayoutInflater.from(context).inflate(R.layout.dialog_action_in_trash, null)
         val title = dialogView.findViewById<TextView>(R.id.trashTitle)
         val content = dialogView.findViewById<TextView>(R.id.trashContent)
         val actionRadioGroup = dialogView.findViewById<RadioGroup>(R.id.actionRadioGroup)
-        title.text = differ.currentList[position].title
-        content.text = differ.currentList[position].content
-        val alertDialog = AlertDialog.Builder(context).setView(dialogView).setNegativeButton("Cancel"){dialog, _ -> dialog.dismiss()}
-            .setPositiveButton("OK"){dialog,_-> val selectedAction = when (actionRadioGroup.checkedRadioButtonId){
-                R.id.rbUndelete -> "Undelete"
-                R.id.rbDelete -> "Delete"
-                else -> null
-            }
-            handleNoteAction(differ.currentList[position], selectedAction)
-            dialog.dismiss()}.create()
+        title.text = note.title
+        content.text = note.content
+        val alertDialog = AlertDialog.Builder(context).setView(dialogView)
+            .setNegativeButton("CANCEL"){dialog, _ -> dialog.dismiss()}
+            .setPositiveButton("OK"){dialog, _ ->
+                val selectedAction = when (actionRadioGroup.checkedRadioButtonId){
+                    R.id.rbUndelete -> "Undelete"
+                    R.id.rbDelete -> "Delete"
+                    else -> null
+                }
+                handleNoteAction(note, selectedAction)
+                dialog.dismiss()
+            }.create()
         alertDialog.show()
     }
 

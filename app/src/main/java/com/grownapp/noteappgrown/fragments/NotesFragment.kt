@@ -87,7 +87,6 @@ class NotesFragment : Fragment(R.layout.fragment_notes), MenuProvider, androidx.
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-        // Inflate the layout for this fragment
         return binding.root
     }
 
@@ -150,6 +149,7 @@ class NotesFragment : Fragment(R.layout.fragment_notes), MenuProvider, androidx.
             }
 
             override fun onNoteLongClick(note: Note) {
+
                 isAlternateMenuVisible = true
                 requireActivity().invalidateOptionsMenu()
                 if(isAlternateMenuVisible){
@@ -164,8 +164,8 @@ class NotesFragment : Fragment(R.layout.fragment_notes), MenuProvider, androidx.
         activity?.let {
             if(optionSort == -1){
                 noteViewModel.getAllNotes().observe(viewLifecycleOwner){note ->
-                    noteAdapter.differ.submitList(note)
-                    currentList = noteAdapter.differ.currentList
+                    noteAdapter.updateNotes(note)
+                    currentList = note
                     updateUI(note)
                 }
             }
@@ -300,7 +300,7 @@ class NotesFragment : Fragment(R.layout.fragment_notes), MenuProvider, androidx.
     private fun showOptionDialog(){
         val sortOption = arrayOf("edit date: from newest", "edit date: from oldest", "title: A to Z", "title: Z to A", "creation date: from newest", "creation date: from oldest", "color: in order as shown on color palette")
         var selectedOption = 0
-        val noteList = noteAdapter.differ.currentList
+        val noteList = currentList
         val builder: AlertDialog.Builder = AlertDialog.Builder(requireContext())
         builder.setTitle("Sort by").setPositiveButton("Sort"){dialog, which ->
             when (selectedOption){
@@ -343,48 +343,42 @@ class NotesFragment : Fragment(R.layout.fragment_notes), MenuProvider, androidx.
     }
 
     private fun sortByCreationDateOldest(noteList: List<Note>) {
-        return noteAdapter.differ.submitList(noteList.sortedBy { it.id })
+        noteAdapter.updateNotes(noteList.sortedBy { it.id })
+        noteAdapter.notifyDataSetChanged()
     }
 
     private fun sortByCreationDateNewest(noteList: List<Note>) {
-        return noteAdapter.differ.submitList(noteList.sortedByDescending { it.id })
+        noteAdapter.updateNotes(noteList.sortedByDescending { it.id })
+        noteAdapter.notifyDataSetChanged()
     }
 
     private fun sortByTitleZToA(noteList: List<Note>) {
-        noteAdapter.differ.submitList(noteList.sortedByDescending { it.title })
-        noteViewModel.getNotesSortByTitleZToA().observe(viewLifecycleOwner){note ->
-            noteAdapter.differ.submitList(note)
-            currentList = noteAdapter.differ.currentList
-            updateUI(note)
-            noteAdapter.notifyDataSetChanged()
-        }
+        noteAdapter.updateNotes(noteList.sortedByDescending { it.title })
+        noteAdapter.notifyDataSetChanged()
     }
 
     private fun sortByTitleAToZ(noteList: List<Note>) {
-        noteAdapter.differ.submitList(currentList.sortedBy { it.title })
-        noteViewModel.getNotesSortByTitleAToZ().observe(viewLifecycleOwner){note ->
-            noteAdapter.differ.submitList(note)
-            currentList = noteAdapter.differ.currentList
-            updateUI(note)
-            noteAdapter.notifyDataSetChanged()
-        }
+        noteAdapter.updateNotes(currentList.sortedBy { it.title })
+        noteAdapter.notifyDataSetChanged()
     }
 
     private fun sortByEditDateOldest(noteList: List<Note>) {
-        return noteAdapter.differ.submitList(noteList.sortedBy { it.time })
+        noteAdapter.updateNotes(noteList.sortedBy { it.time })
+        noteAdapter.notifyDataSetChanged()
     }
 
     private fun sortByEditDateNewest(noteList: List<Note>) {
-        return noteAdapter.differ.submitList(noteList.sortedByDescending { it.time })
+        noteAdapter.updateNotes(noteList.sortedByDescending { it.time })
+        noteAdapter.notifyDataSetChanged()
     }
 
     private fun searchNote(query: String?){
         if(query != null){
             if(query.isEmpty()){
-                noteAdapter.differ.submitList(currentList)
+                noteAdapter.updateNotes(currentList)
             }else{
                 noteViewModel.searchNote("%$query%").observe(this){notes ->
-                    noteAdapter.differ.submitList(notes)
+                    noteAdapter.updateNotes(notes)
                 }
             }
         }
@@ -420,7 +414,7 @@ class NotesFragment : Fragment(R.layout.fragment_notes), MenuProvider, androidx.
     private fun exportNoteToTextFile(uri: Uri){
         var selectedNotes = noteAdapter.getSelectedItems()
         if(selectedNotes.isEmpty()){
-            selectedNotes = noteAdapter.differ.currentList.toSet()
+            selectedNotes = noteAdapter.getSelectedItems()
         }
         selectedNotes.forEach { note ->
             val fileName = "${note.title}.txt"
@@ -606,7 +600,7 @@ class NotesFragment : Fragment(R.layout.fragment_notes), MenuProvider, androidx.
                 true
             }
             R.id.selectAll -> {
-                noteAdapter.selectAllItem()
+                noteAdapter.selectAllItems()
                 isAlternateMenuVisible = true
                 changeBackNavigationIcon()
                 requireActivity().invalidateOptionsMenu()
@@ -614,7 +608,7 @@ class NotesFragment : Fragment(R.layout.fragment_notes), MenuProvider, androidx.
                 true
             }
             R.id.select_all_notes -> {
-                noteAdapter.selectAllItem()
+                noteAdapter.selectAllItems()
                 isAlternateMenuVisible = true
                 changeBackNavigationIcon()
                 requireActivity().invalidateOptionsMenu()
@@ -653,7 +647,7 @@ class NotesFragment : Fragment(R.layout.fragment_notes), MenuProvider, androidx.
 
     override fun onQueryTextChange(newText: String?): Boolean {
         if(newText.isNullOrEmpty()){
-            noteAdapter.differ.submitList(currentList)
+            noteAdapter.updateNotes(currentList)
         }else{
             searchNote(newText)
         }

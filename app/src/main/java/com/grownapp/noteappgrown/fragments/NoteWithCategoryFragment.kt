@@ -22,6 +22,7 @@ import androidx.core.view.MenuProvider
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.lifecycle.Lifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.google.android.material.appbar.MaterialToolbar
 import com.grownapp.noteappgrown.R
 import com.grownapp.noteappgrown.activities.EditNoteActivity
 import com.grownapp.noteappgrown.activities.MainActivity
@@ -55,7 +56,7 @@ class NoteWithCategoryFragment : Fragment(), MenuProvider, androidx.appcompat.wi
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        // Inflate the layout for this fragment
+
         return binding.root
     }
 
@@ -101,8 +102,8 @@ class NoteWithCategoryFragment : Fragment(), MenuProvider, androidx.appcompat.wi
         binding.rcvNoteWithCategory.adapter = noteAdapter
         activity?.let {
             noteViewModel.getNotesByCategory(categoryId).observe(viewLifecycleOwner){note ->
-                noteAdapter.differ.submitList(note)
-                currentList = noteAdapter.differ.currentList
+                noteAdapter.updateNotes(note)
+                currentList = noteAdapter.getNotes()
                 updateUI(note)
             }
         }
@@ -124,7 +125,7 @@ class NoteWithCategoryFragment : Fragment(), MenuProvider, androidx.appcompat.wi
 
     private fun changeBackNavigationIcon() {
         (activity as MainActivity).let { mainActivity ->
-            val toolbar = mainActivity.findViewById<Toolbar>(R.id.topAppBar)
+            val toolbar = mainActivity.findViewById<MaterialToolbar>(R.id.topAppBar)
             val drawerLayout = mainActivity.findViewById<DrawerLayout>(R.id.drawerLayout)
             toolbar.setNavigationIcon(R.drawable.ic_back_24)
             toolbar.navigationIcon?.setTint(ContextCompat.getColor(requireContext(), R.color.white))
@@ -145,7 +146,7 @@ class NoteWithCategoryFragment : Fragment(), MenuProvider, androidx.appcompat.wi
 
     private fun updateSelectedCount() {
         (activity as MainActivity).let { mainActivity ->
-            val toolbar = mainActivity.findViewById<Toolbar>(R.id.topAppBar)
+            val toolbar = mainActivity.findViewById<MaterialToolbar>(R.id.topAppBar)
             if(isAlternateMenuVisible){
                 toolbar.setTitle(noteAdapter.getSelectedItemsCount().toString())
             }else{
@@ -234,7 +235,7 @@ class NoteWithCategoryFragment : Fragment(), MenuProvider, androidx.appcompat.wi
             "creation date: from oldest"
         )
         var selectedOption = 0
-        val noteList = noteAdapter.differ.currentList
+        val noteList = noteAdapter.getNotes()
         val builder: AlertDialog.Builder = AlertDialog.Builder(requireContext())
         builder.setTitle("Sort by").setPositiveButton("Sort"){dialog, which ->
             when (selectedOption){
@@ -254,36 +255,42 @@ class NoteWithCategoryFragment : Fragment(), MenuProvider, androidx.appcompat.wi
     }
 
     private fun sortByCreationDateOldest(noteList: List<Note>) {
-        return noteAdapter.differ.submitList(noteList.sortedBy { it.id })
+        noteAdapter.updateNotes(noteList.sortedBy { it.id })
+        noteAdapter.notifyDataSetChanged()
     }
 
     private fun sortByCreationDateNewest(noteList: List<Note>) {
-        return noteAdapter.differ.submitList(noteList.sortedByDescending { it.id })
+        noteAdapter.updateNotes(noteList.sortedByDescending { it.id })
+        noteAdapter.notifyDataSetChanged()
     }
 
     private fun sortByTitleZToA(noteList: List<Note>) {
-        return noteAdapter.differ.submitList(noteList.sortedByDescending { it.title })
+        noteAdapter.updateNotes(noteList.sortedByDescending { it.title })
+        noteAdapter.notifyDataSetChanged()
     }
 
     private fun sortByTitleAToZ(noteList: List<Note>) {
-        return noteAdapter.differ.submitList(noteList.sortedBy { it.title })
+        noteAdapter.updateNotes(noteList.sortedBy { it.title })
+        noteAdapter.notifyDataSetChanged()
     }
 
     private fun sortByEditDateOldest(noteList: List<Note>) {
-        return noteAdapter.differ.submitList(noteList.sortedBy { it.time })
+        noteAdapter.updateNotes(noteList.sortedBy { it.time })
+        noteAdapter.notifyDataSetChanged()
     }
 
     private fun sortByEditDateNewest(noteList: List<Note>) {
-        return noteAdapter.differ.submitList(noteList.sortedByDescending { it.time })
+        noteAdapter.updateNotes(noteList.sortedByDescending { it.time })
+        noteAdapter.notifyDataSetChanged()
     }
 
     private fun searchNote(query: String?){
         if(query != null){
             if(query.isEmpty()){
-                noteAdapter.differ.submitList(currentList)
+                noteAdapter.updateNotes(currentList)
             }else{
                 noteViewModel.searchNote("%$query%").observe(this){notes ->
-                    noteAdapter.differ.submitList(notes)
+                    noteAdapter.updateNotes(notes)
                 }
             }
         }
@@ -314,7 +321,7 @@ class NoteWithCategoryFragment : Fragment(), MenuProvider, androidx.appcompat.wi
             true
         }
             R.id.selectAll -> {
-                noteAdapter.selectAllItem()
+                noteAdapter.selectAllItems()
                 updateSelectedCount()
                 true
             }
@@ -338,7 +345,7 @@ class NoteWithCategoryFragment : Fragment(), MenuProvider, androidx.appcompat.wi
 
     override fun onQueryTextChange(newText: String?): Boolean {
         if(newText.isNullOrEmpty()){
-            noteAdapter.differ.submitList(currentList)
+            noteAdapter.updateNotes(currentList)
         }else{
             searchNote(newText)
         }

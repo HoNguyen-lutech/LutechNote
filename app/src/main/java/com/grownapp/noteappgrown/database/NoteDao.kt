@@ -25,7 +25,8 @@ interface NoteDao {
             "FROM notes " +
             "LEFT JOIN note_category_cross_ref " +
             "ON notes.id = note_category_cross_ref.noteId " +
-            "WHERE note_category_cross_ref.categoryId = :categoryId")
+            "WHERE note_category_cross_ref.categoryId = :categoryId " +
+            "AND notes.inTrash = 0")
     fun getNotesByCategory(categoryId: Int): LiveData<List<Note>>
     @Query("select * from notes where inTrash = 0 order by id desc ")
     fun getAllNotes(): LiveData<List<Note>>

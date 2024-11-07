@@ -57,7 +57,7 @@ class TrashFragment : Fragment(R.layout.fragment_trash), MenuProvider {
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        // Inflate the layout for this fragment
+
         return binding.root
     }
 
@@ -99,8 +99,8 @@ class TrashFragment : Fragment(R.layout.fragment_trash), MenuProvider {
         binding.listTrashRcv.adapter = noteAdapter
         activity?.let {
             noteViewModel.getAllTrashNotes().observe(viewLifecycleOwner){note ->
-                noteAdapter.differ.submitList(note)
-                currentList = noteAdapter.differ.currentList
+                noteAdapter.updateNotes(note)
+                currentList = noteAdapter.getNotes()
                 updateUI(note)
             }
         }
@@ -185,7 +185,7 @@ class TrashFragment : Fragment(R.layout.fragment_trash), MenuProvider {
         val builer = AlertDialog.Builder(context).setMessage("Restore all notes?").setNegativeButton("No"){dialog, _ ->
             dialog.dismiss()
         }.setPositiveButton("Yes"){dialog, _ ->
-            val selectedItem = noteAdapter.differ.currentList
+            val selectedItem = noteAdapter.getNotes()
             val selectedIds = selectedItem.map { it.id }
             noteViewModel.restoreFromTrash(selectedIds)
             dialog.dismiss()
@@ -198,7 +198,7 @@ class TrashFragment : Fragment(R.layout.fragment_trash), MenuProvider {
             .setNegativeButton("No"){dialog, _ ->
                 dialog.dismiss()
             }.setPositiveButton("Yes"){dialog, _ ->
-                val selectedItem = noteAdapter.differ.currentList
+                val selectedItem = noteAdapter.getNotes()
                 val selectedIds = selectedItem.map { it.id }
                 noteViewModel.deleteNote(selectedIds)
                 dialog.dismiss()
@@ -229,7 +229,7 @@ class TrashFragment : Fragment(R.layout.fragment_trash), MenuProvider {
     private fun exportNoteToTextFile(uri: Uri){
         var selectedNotes = noteAdapter.getSelectedItems()
         if(selectedNotes.isEmpty()){
-            selectedNotes = noteAdapter.differ.currentList.toSet()
+            selectedNotes = noteAdapter.getSelectedItems()
         }
         selectedNotes.forEach { note ->
             val fileName = "${note.title}.txt"
@@ -306,7 +306,7 @@ class TrashFragment : Fragment(R.layout.fragment_trash), MenuProvider {
     override fun onMenuItemSelected(menuItem: MenuItem): Boolean {
         return when (menuItem.itemId){
             R.id.selectAll -> {
-                noteAdapter.selectAllItem()
+                noteAdapter.selectAllItems()
                 isAlternateMenuVisible = true
                 changeBackNavigationIcon()
                 requireActivity().invalidateOptionsMenu()
