@@ -57,6 +57,9 @@ import com.grownapp.noteappgrown.viewmodel.NoteCategoryViewModel
 import com.grownapp.noteappgrown.viewmodel.NoteCategoryViewModelFactory
 import com.grownapp.noteappgrown.viewmodel.NoteViewModel
 import com.grownapp.noteappgrown.viewmodel.NoteViewModelFactory
+import org.json.JSONArray
+import org.json.JSONException
+import org.json.JSONObject
 import java.text.SimpleDateFormat
 import java.util.Locale
 
@@ -377,14 +380,13 @@ class EditNoteActivity : AppCompatActivity(), OnColorClickListener {
         }
     }
 
-
     private fun saveNote() {
         val id = intent.getIntExtra("id", 0)
         val created = intent.getStringExtra("created")
         val color = noteViewModel.getColor(id)
         val noteTitle = binding.edtTitle.text.toString()
-        val noteContent = HtmlCompat.toHtml(binding.edtContent.text as Spannable, HtmlCompat.TO_HTML_PARAGRAPH_LINES_CONSECUTIVE
-        )
+        val spannableText = binding.edtContent.text as SpannableStringBuilder
+        val noteContent = serializeSpannableString(spannableText)
         if(id == 0){
             val note = Note(
                 noteViewModel.getLatestId(),
@@ -400,8 +402,88 @@ class EditNoteActivity : AppCompatActivity(), OnColorClickListener {
             val note = Note(id, noteTitle, noteContent, getCurrentTime(), created!!, color, false)
             noteViewModel.updateNote(note)
         }
+
         Toast.makeText(this, "Saved", Toast.LENGTH_SHORT).show()
     }
+    fun serializeSpannableString(spannable: SpannableStringBuilder): String {
+        val jsonObject = JSONObject()
+        jsonObject.put("text", spannable.toString()) // Lưu nội dung văn bản
+
+        val spansArray = JSONArray()
+
+        val spans = spannable.getSpans(0, spannable.length, Any::class.java)
+        for (span in spans) {
+            val spanObject = JSONObject()
+            val start = spannable.getSpanStart(span)
+            val end = spannable.getSpanEnd(span)
+
+            when (span) {
+                is ForegroundColorSpan -> {
+                    spanObject.put("type", "ForegroundColorSpan")
+                    spanObject.put("color", span.foregroundColor)
+                }
+                is BackgroundColorSpan -> {
+                    spanObject.put("type", "BackgroundColorSpan")
+                    spanObject.put("color", span.backgroundColor)
+                }
+                is StyleSpan -> {
+                    spanObject.put("type", "StyleSpan")
+                    spanObject.put("style", span.style)
+                }
+                is AbsoluteSizeSpan -> {
+                    spanObject.put("type", "AbsoluteSizeSpan")
+                    spanObject.put("size", span.size)
+                    spanObject.put("dip", span.dip)
+                }
+                is UnderlineSpan -> {
+                    spanObject.put("type", "UnderlineSpan")
+                }
+                is StrikethroughSpan -> {
+                    spanObject.put("type", "StrikethroughSpan")
+                }
+
+                else -> {
+                    continue
+                }
+            }
+
+            spanObject.put("start", start)
+            spanObject.put("end", end)
+
+            spansArray.put(spanObject)
+        }
+
+        jsonObject.put("spans", spansArray)
+
+        return jsonObject.toString()
+    }
+
+
+
+//    private fun saveNote() {
+//        val id = intent.getIntExtra("id", 0)
+//        val created = intent.getStringExtra("created")
+//        val color = noteViewModel.getColor(id)
+//        val noteTitle = binding.edtTitle.text.toString()
+//        val noteContent = HtmlCompat.toHtml(binding.edtContent.text as Spannable, HtmlCompat.TO_HTML_PARAGRAPH_LINES_CONSECUTIVE
+//        )
+//        if(id == 0){
+//            val note = Note(
+//                noteViewModel.getLatestId(),
+//                noteTitle,
+//                noteContent,
+//                getCurrentTime(),
+//                created!!,
+//                color,
+//                false
+//            )
+//            noteViewModel.updateNote(note)
+//        }else{
+//            val note = Note(id, noteTitle, noteContent, getCurrentTime(), created!!, color, false)
+//            noteViewModel.updateNote(note)
+//        }
+//        Toast.makeText(this, "Saved", Toast.LENGTH_SHORT).show()
+//    }
 
     private fun getCurrentTime(): String {
         val calendar = Calendar.getInstance()
@@ -570,12 +652,14 @@ class EditNoteActivity : AppCompatActivity(), OnColorClickListener {
         noteAdapter.notifyDataSetChanged()
     }
 
+
+
     private fun loadNote() {
         val id = intent.getIntExtra("id", 0)
         val title = intent.getStringExtra("title")
         val color = intent.getStringExtra("color")
         val content: String = if(id == 0){
-            intent.getStringExtra("content").toString()
+            intent.getStringExtra("content").orEmpty()
         }else{
             noteViewModel.getNoteById(id).content
         }
@@ -590,9 +674,84 @@ class EditNoteActivity : AppCompatActivity(), OnColorClickListener {
         }
         currentContent = content
         binding.edtTitle.setText(title)
-        binding.edtContent.setText(HtmlCompat.fromHtml(content, HtmlCompat.FROM_HTML_MODE_COMPACT))
-
+        if (content.isNotEmpty()) {
+            try {
+                val spannableContent = deserializeSpannableString(content)
+                binding.edtContent.setText(spannableContent)
+            } catch (e: JSONException) {
+                e.printStackTrace()
+                binding.edtContent.setText(content)
+            }
+        } else {
+            binding.edtContent.setText("")
+        }
     }
+    fun deserializeSpannableString(serializedText: String): SpannableStringBuilder {
+        val jsonObject = JSONObject(serializedText)
+        val text = jsonObject.getString("text")
+        val spannable = SpannableStringBuilder(text)
+
+        val spansArray = jsonObject.getJSONArray("spans")
+        for (i in 0 until spansArray.length()) {
+            val spanObject = spansArray.getJSONObject(i)
+            val start = spanObject.getInt("start")
+            val end = spanObject.getInt("end")
+
+            when (spanObject.getString("type")) {
+                "ForegroundColorSpan" -> {
+                    val color = spanObject.getInt("color")
+                    spannable.setSpan(ForegroundColorSpan(color), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                }
+                "BackgroundColorSpan" -> {
+                    val color = spanObject.getInt("color")
+                    spannable.setSpan(BackgroundColorSpan(color), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                }
+                "StyleSpan" -> {
+                    val style = spanObject.getInt("style")
+                    spannable.setSpan(StyleSpan(style), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                }
+                "AbsoluteSizeSpan" -> {
+                    val size = spanObject.getInt("size")
+                    val dip = spanObject.getBoolean("dip")
+                    spannable.setSpan(AbsoluteSizeSpan(size, dip), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                }
+                "UnderlineSpan" -> {
+                    spannable.setSpan(UnderlineSpan(), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                }
+                "StrikethroughSpan" -> {
+                    spannable.setSpan(StrikethroughSpan(), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                }
+            }
+        }
+
+        return spannable
+    }
+
+
+
+//    private fun loadNote() {
+//        val id = intent.getIntExtra("id", 0)
+//        val title = intent.getStringExtra("title")
+//        val color = intent.getStringExtra("color")
+//        val content: String = if(id == 0){
+//            intent.getStringExtra("content").toString()
+//        }else{
+//            noteViewModel.getNoteById(id).content
+//        }
+//        println(content)
+//        if(color != null){
+//            val backgroundDrawable = GradientDrawable()
+//            backgroundDrawable.setColor(Color.parseColor(color))
+//            backgroundDrawable.setStroke(4, ContextCompat.getColor(this, R.color.brownEarth))
+//            binding.editNote.background = backgroundDrawable
+//            binding.appBar.background = backgroundDrawable
+//            binding.main.background = backgroundDrawable
+//        }
+//        currentContent = content
+//        binding.edtTitle.setText(title)
+//        binding.edtContent.setText(HtmlCompat.fromHtml(content, HtmlCompat.FROM_HTML_MODE_COMPACT))
+//
+//    }
 
     private fun formattingBarAction() {
         binding.bold.setOnClickListener {
@@ -921,17 +1080,32 @@ class EditNoteActivity : AppCompatActivity(), OnColorClickListener {
         val text = binding.edtContent.text
         if (text is Spannable && currentTextSize != null) {
 
+            // Xóa các `AbsoluteSizeSpan` hiện tại trong phạm vi
             text.getSpans(start, end, AbsoluteSizeSpan::class.java).forEach { span ->
                 text.removeSpan(span)
             }
 
-            for (i in start until end) {
-                if (!text[i].isWhitespace()) {
-                    text.setSpan(AbsoluteSizeSpan(currentTextSize!!.toInt(), true), i, i + 1, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
-                }
-            }
+            // Áp dụng `AbsoluteSizeSpan` cho toàn bộ phạm vi
+            text.setSpan(AbsoluteSizeSpan(currentTextSize!!.toInt(), true), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
         }
     }
+
+
+//    private fun applyTextSize(start: Int, end: Int) {
+//        val text = binding.edtContent.text
+//        if (text is Spannable && currentTextSize != null) {
+//
+//            text.getSpans(start, end, AbsoluteSizeSpan::class.java).forEach { span ->
+//                text.removeSpan(span)
+//            }
+//
+//            for (i in start until end) {
+//                if (!text[i].isWhitespace()) {
+//                    text.setSpan(AbsoluteSizeSpan(currentTextSize!!.toInt(), true), i, i + 1, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+//                }
+//            }
+//        }
+//    }
 
     private fun applyTextColorForTitle(start: Int, end: Int){
         val text = binding.edtTitle.text
