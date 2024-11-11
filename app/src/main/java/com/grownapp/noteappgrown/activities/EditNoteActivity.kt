@@ -459,32 +459,6 @@ class EditNoteActivity : AppCompatActivity(), OnColorClickListener {
     }
 
 
-
-//    private fun saveNote() {
-//        val id = intent.getIntExtra("id", 0)
-//        val created = intent.getStringExtra("created")
-//        val color = noteViewModel.getColor(id)
-//        val noteTitle = binding.edtTitle.text.toString()
-//        val noteContent = HtmlCompat.toHtml(binding.edtContent.text as Spannable, HtmlCompat.TO_HTML_PARAGRAPH_LINES_CONSECUTIVE
-//        )
-//        if(id == 0){
-//            val note = Note(
-//                noteViewModel.getLatestId(),
-//                noteTitle,
-//                noteContent,
-//                getCurrentTime(),
-//                created!!,
-//                color,
-//                false
-//            )
-//            noteViewModel.updateNote(note)
-//        }else{
-//            val note = Note(id, noteTitle, noteContent, getCurrentTime(), created!!, color, false)
-//            noteViewModel.updateNote(note)
-//        }
-//        Toast.makeText(this, "Saved", Toast.LENGTH_SHORT).show()
-//    }
-
     private fun getCurrentTime(): String {
         val calendar = Calendar.getInstance()
         val formattedDate = SimpleDateFormat("dd/MM/yyyy, HH:mm", Locale.getDefault()).format(calendar.time)
@@ -726,32 +700,6 @@ class EditNoteActivity : AppCompatActivity(), OnColorClickListener {
 
         return spannable
     }
-
-
-
-//    private fun loadNote() {
-//        val id = intent.getIntExtra("id", 0)
-//        val title = intent.getStringExtra("title")
-//        val color = intent.getStringExtra("color")
-//        val content: String = if(id == 0){
-//            intent.getStringExtra("content").toString()
-//        }else{
-//            noteViewModel.getNoteById(id).content
-//        }
-//        println(content)
-//        if(color != null){
-//            val backgroundDrawable = GradientDrawable()
-//            backgroundDrawable.setColor(Color.parseColor(color))
-//            backgroundDrawable.setStroke(4, ContextCompat.getColor(this, R.color.brownEarth))
-//            binding.editNote.background = backgroundDrawable
-//            binding.appBar.background = backgroundDrawable
-//            binding.main.background = backgroundDrawable
-//        }
-//        currentContent = content
-//        binding.edtTitle.setText(title)
-//        binding.edtContent.setText(HtmlCompat.fromHtml(content, HtmlCompat.FROM_HTML_MODE_COMPACT))
-//
-//    }
 
     private fun formattingBarAction() {
         binding.bold.setOnClickListener {
