@@ -1,5 +1,6 @@
 package com.grownapp.noteappgrown.activities
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
@@ -18,5 +19,9 @@ class BackupActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(binding.root)
         binding.topAppBar.setNavigationOnClickListener { finish() }
+        binding.showInstructionsBtn.setOnClickListener {
+            startActivity(Intent(this, HelpActivity::class.java))
+            finish()
+        }
     }
 }
